@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설계 문서 커밋 읽기</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fg:#1f2328; --muted:#5f6670; --card:#ffffff; --line:#e3e0d8;
+  --accent:#2f6f5e; --accent-soft:#e3efe9;
+  --add-bg:#e6f4ea; --add-fg:#1a5e2e; --del-bg:#fbe9e9; --del-fg:#8a1f1f;
+  --code-bg:#f4f2ec; --hl:#fff3c4;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --fg:#e6e6e3; --muted:#9aa0a6; --card:#1e2125; --line:#30343a;
+    --accent:#7cc4ad; --accent-soft:#1f3530;
+    --add-bg:#16301f; --add-fg:#8fd6a4; --del-bg:#3a1c1c; --del-fg:#f0a3a3;
+    --code-bg:#202328; --hl:#4a4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b; --fg:#e6e6e3; --muted:#9aa0a6; --card:#1e2125; --line:#30343a;
+  --accent:#7cc4ad; --accent-soft:#1f3530;
+  --add-bg:#16301f; --add-fg:#8fd6a4; --del-bg:#3a1c1c; --del-fg:#f0a3a3;
+  --code-bg:#202328; --hl:#4a4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 var(--serif)}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25}
+h1{font-size:2rem;margin:0 0 .3em}
+h2{font-size:1.4rem;margin:2.4em 0 .6em;padding-top:.4em;border-top:2px solid var(--line)}
+h3{font-size:1.1rem;margin:1.8em 0 .4em}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-style:italic;border-left:4px solid var(--accent);padding:6px 0 6px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+ul.other{font:15px/1.6 var(--sans)}
+table{border-collapse:collapse;width:100%;font:14px/1.5 var(--sans);margin:12px 0}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.tag{font:600 12px var(--sans);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.tag.ok{background:var(--add-bg);color:var(--add-fg)}
+.tag.guess{background:var(--hl);color:var(--fg)}
+svg text{font-family:var(--sans);fill:var(--fg)}
+svg .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+svg .now{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+svg .arrow{stroke:var(--muted);stroke-width:1.5;fill:none}
+svg .mut{fill:var(--muted)}
+svg .acc{fill:var(--accent)}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  main{max-width:none;padding:0}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>하나의 슬라이스를 네 가지 문서로 나누고, ID로 다시 묶은 커밋</h1>
+  <div class="meta"><span>commit 083169d (<code>main</code>)</span><span>10 files</span><span>+399 / −5</span></div>
+  <div class="assumption">
+    <b>독자 가정:</b> 이 문서들을 같이 쓴 사람입니다. Spring, JPA, 헥사고날 아키텍처, JWT, TDD를 이미 압니다.
+    그래서 기술 개념은 접어 두었습니다. 세미나 청중에게 보여줄 때 펴면 됩니다.
+    중심은 "문서 네 종류가 어떻게 나뉘고 연결되는가"와 "구현을 시작하면 어디에서 막히는가"입니다.
+    코드는 아직 없습니다. 이 커밋도 문서만 바꿉니다.
+  </div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <p><b>이 커밋 전의 상태는 "결정은 있고 설계는 없는" 상태입니다.</b> 저장소에는 브레인스토밍 문서, 일지, <code>CLAUDE.md</code>만 있었습니다.</p>
+
+  <p>브레인스토밍이 정한 것은 다음과 같습니다.</p>
+  <ul>
+    <li>목적: 방법론 실험. 세미나에서 process를 발표한다.</li>
+    <li>범위: 백엔드만. 수직 슬라이스 1~2개.</li>
+    <li>첫 슬라이스: <b>가입 → 로그인 → 회원 정보 조회</b>.</li>
+    <li>원본(RealWorld)과의 호환은 필요 없다. 아이디어만 가져온다.</li>
+    <li>기술 스택: Spring Boot, Java 25, JPA, H2, Lombok, JUnit, ArchUnit.</li>
+  </ul>
+
+  <p>열린 질문은 2개가 남아 있었습니다. "무엇으로 검증하는가"와 "ArchUnit으로 어떤 규칙을 강제하는가"입니다.</p>
+
+  <details>
+    <summary>헥사고날 아키텍처</summary>
+    <p>도메인을 가운데에 두고, 기술(웹, DB, 보안)을 바깥에 두는 구조입니다. 안쪽은 바깥쪽을 모릅니다. 안쪽이 필요한 것은 인터페이스(<b>포트</b>)로 선언하고, 바깥쪽의 <b>어댑터</b>가 그것을 구현합니다.</p>
+    <p>예: 가입은 "회원을 저장한다"가 필요합니다. 안쪽은 "저장하는 포트"만 압니다. JPA로 저장하는 코드는 어댑터에 있습니다. 그래서 의존의 방향은 항상 바깥에서 안으로 갑니다.</p>
+  </details>
+  <details>
+    <summary>ArchUnit</summary>
+    <p>"이 패키지는 저 패키지에 의존하지 않는다" 같은 규칙을 JUnit 테스트로 쓰는 라이브러리입니다. 규칙을 어긴 코드가 들어오면 테스트가 실패합니다. 아키텍처 규칙이 문서가 아니라 빌드의 일부가 됩니다.</p>
+  </details>
+  <details>
+    <summary>JWT와 BCrypt</summary>
+    <p><b>JWT</b>는 서명된 토큰입니다. 서버는 토큰을 저장하지 않습니다. 서명이 맞고 만료되지 않았으면 믿습니다. 그래서 발급한 토큰을 만료 전에 취소할 수 없습니다.</p>
+    <p><b>BCrypt</b>는 비밀번호를 되돌릴 수 없는 해시로 바꾸는 알고리즘입니다. 한 가지 제한이 있습니다. 입력의 앞 <b>72바이트</b>만 씁니다. 이 숫자는 5절에서 다시 나옵니다.</p>
+  </details>
+  <details>
+    <summary>RFC 9457 Problem Details</summary>
+    <p>HTTP API의 오류 본문을 위한 표준 JSON 형식입니다. <code>type</code>, <code>title</code>, <code>status</code>, <code>detail</code> 같은 필드가 있습니다. Spring은 <code>ProblemDetail</code> 클래스로 지원합니다.</p>
+  </details>
+
+  <p>문제는 이것입니다. "가입 → 로그인 → 회원 정보 조회"는 한 줄입니다. 한 줄로는 구현을 시작할 수 없습니다. 무엇이 "가입"인지, 어떤 규칙이 있는지, 어떤 기술로 만드는지, 어떤 순서로 만드는지가 없습니다.</p>
+</section>
+
+<section id="idea">
+  <h2>2. 한 장의 그림으로 보는 생각</h2>
+  <p class="intuition">한 줄의 요구를 네 가지 질문으로 나눠서 네 종류의 문서에 넣는다. 그리고 번호표를 붙여서 다시 한 줄로 따라갈 수 있게 한다.</p>
+
+  <p>네 가지 질문은 "무엇을", "어떤 말과 규칙으로", "어떻게, 왜", "어떤 순서로"입니다. 각각 spec, domain, ADR, plan이 답합니다. 한 문서는 한 질문에만 답합니다. 예를 들면 spec에는 API 경로가 없고, plan에는 코드가 없습니다.</p>
+  <p>나누기만 하면 문서가 흩어집니다. 그래서 번호표를 붙였습니다. spec의 수용 기준은 <code>AC-1.1</code> 같은 ID를 가지고, domain의 규칙은 <code>R1</code> 같은 ID를 가집니다. plan은 이 ID만 가리킵니다. 나중에 테스트의 이름에도 같은 ID가 들어갑니다.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 360" role="img" aria-label="문서 네 종류와 ID로 이어지는 추적 경로">
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" class="mut"/>
+        </marker>
+      </defs>
+
+      <rect class="box" x="10" y="20" width="150" height="70" rx="6"/>
+      <text x="85" y="46" font-size="13" text-anchor="middle" font-weight="600">원본의 테스트</text>
+      <text class="mut" x="85" y="66" font-size="12" text-anchor="middle">errors_auth.hurl</text>
+      <text class="mut" x="85" y="82" font-size="12" text-anchor="middle">"Register duplicate"</text>
+
+      <path class="arrow" d="M160,55 L198,55" marker-end="url(#ah2)"/>
+      <text class="mut" x="179" y="46" font-size="11" text-anchor="middle">근거</text>
+
+      <rect class="now" x="200" y="20" width="150" height="70" rx="6"/>
+      <text x="275" y="46" font-size="13" text-anchor="middle" font-weight="600">spec — 무엇을</text>
+      <text x="275" y="66" font-size="12" text-anchor="middle">AC-1.5</text>
+      <text class="mut" x="275" y="82" font-size="12" text-anchor="middle">이미 있는 이메일은 거부</text>
+
+      <path class="arrow" d="M350,55 L388,55" marker-end="url(#ah2)"/>
+
+      <rect class="now" x="390" y="20" width="160" height="70" rx="6"/>
+      <text x="470" y="46" font-size="13" text-anchor="middle" font-weight="600">domain — 말과 규칙</text>
+      <text x="470" y="66" font-size="12" text-anchor="middle">R6</text>
+      <text class="mut" x="470" y="82" font-size="12" text-anchor="middle">이메일은 회원마다 다르다</text>
+
+      <path class="arrow" d="M550,55 L588,55" marker-end="url(#ah2)"/>
+
+      <rect class="now" x="590" y="20" width="160" height="70" rx="6"/>
+      <text x="670" y="46" font-size="13" text-anchor="middle" font-weight="600">plan — 순서</text>
+      <text x="670" y="66" font-size="12" text-anchor="middle">작업 4</text>
+      <text class="mut" x="670" y="82" font-size="12" text-anchor="middle">검증: AC-1.5, R6</text>
+
+      <rect class="now" x="200" y="150" width="550" height="92" rx="6"/>
+      <text x="475" y="174" font-size="13" text-anchor="middle" font-weight="600">ADR — 어떻게, 왜</text>
+      <text x="475" y="196" font-size="12" text-anchor="middle">0002 헥사고날: 유일성은 유스케이스가 저장 포트에 물어서 지킨다</text>
+      <text x="475" y="214" font-size="12" text-anchor="middle">0004 TDD: 테스트의 이름에 AC-1.5를 넣는다</text>
+      <text x="475" y="232" font-size="12" text-anchor="middle">0005 API 규약: 이 경우의 상태 코드는 409다</text>
+
+      <path class="arrow" d="M275,90 L275,148" marker-end="url(#ah2)"/>
+      <path class="arrow" d="M470,90 L470,148" marker-end="url(#ah2)"/>
+      <path class="arrow" d="M670,148 L670,92" marker-end="url(#ah2)"/>
+
+      <rect class="box" x="200" y="290" width="550" height="50" rx="6" stroke-dasharray="5 4"/>
+      <text class="mut" x="475" y="312" font-size="13" text-anchor="middle" font-weight="600">테스트와 코드 (아직 없음)</text>
+      <text class="mut" x="475" y="330" font-size="12" text-anchor="middle">같은 ID가 테스트의 이름으로 이어질 자리</text>
+      <path class="arrow" d="M475,242 L475,288" marker-end="url(#ah2)" stroke-dasharray="5 4"/>
+    </svg>
+    <figcaption>규칙 하나("이메일은 유일하다")를 끝까지 따라간 경로. 색이 있는 상자가 이 커밋이 만든 문서입니다.</figcaption>
+  </figure>
+
+  <p>이 커밋에 인터랙티브 위젯은 없습니다. 변경이 문서뿐이고, 입력을 바꾸면 달라지는 계산이 없기 때문입니다. 추적 경로는 위의 그림과 3절의 표로 충분히 보입니다.</p>
+</section>
+
+<section id="walkthrough">
+  <h2>3. 변경을 단계별로 읽기</h2>
+  <p>파일 이름의 순서(adr → brainstorming → domain → …)가 아니라 생각의 순서로 읽습니다. 단계는 5개입니다.</p>
+
+  <div class="step">
+    <h3>단계 1 — "무엇을"만 적는다 (spec)</h3>
+    <p class="why">왜 이 단계인가: 나머지 세 문서는 모두 spec을 가리킵니다. 그래서 spec이 먼저입니다. 그리고 spec은 기술이 바뀌어도 그대로여야 합니다.</p>
+    <p class="file-role"><b>docs/spec/01-member-signup-login.md</b> — 슬라이스의 요구사항입니다. 목표 3개와 수용 기준 15개가 있습니다. 새 파일입니다 (77줄).</p>
+<pre class="diff"><span class="add mark">이 문서는 **무엇을** 만드는지만 말한다. API의 모양과 기술은 [ADR](../adr/)에 있다.</span><span class="add"></span><span class="add">## 목표 1. 방문자가 회원으로 가입한다</span><span class="skip">… 4줄 생략 …</span><span class="add">| AC-1.1 | 올바른 값으로 가입하면 회원이 생긴다. 결과로 사용자 이름과 이메일을 받는다. |</span><span class="skip">… 3줄 생략 (AC-1.2 ~ AC-1.4) …</span><span class="add">| AC-1.5 | 이미 있는 이메일이면 거부한다. |</span><span class="skip">… 9줄 생략 (AC-1.6, AC-1.7, 목표 2의 머리말, AC-2.1) …</span><span class="add">| AC-2.2 | 비밀번호가 틀리면 거부한다. |</span><span class="add mark">| AC-2.3 | 없는 이메일이면 거부한다. AC-2.2와 구분할 수 없는 결과를 준다. |</span></pre>
+    <p>표시한 첫 줄이 이 문서의 경계입니다. 수용 기준에는 "거부한다"만 있습니다. <code>409</code>도 <code>POST</code>도 없습니다. 상태 코드와 경로는 ADR-0005에 있습니다.</p>
+    <p>AC-2.3은 다른 기준(AC-2.2)을 가리킵니다. "두 결과가 같아야 한다"는 요구는 기준 하나만 봐서는 검증할 수 없습니다. ID가 있어서 이렇게 쓸 수 있습니다.</p>
+
+    <p>spec의 뒤쪽 절반은 목표가 아니라 <b>경계와 출처</b>입니다.</p>
+<pre class="diff"><span class="add">## 원본과 다른 점</span><span class="add"></span><span class="add">| 항목 | 원본 | 이 spec | 이유 |</span><span class="add">|---|---|---|---|</span><span class="add">| 가입의 결과 | 토큰을 함께 준다 | 토큰을 주지 않는다 | 슬라이스에 로그인 단계가 따로 있다 |</span><span class="add">| 가입 때 비밀번호 길이 | 빈 값만 검사한다 | 8~64자 | 원본은 이 규칙을 수정에만 적용한다. 가입에도 같은 규칙이 맞다 |</span><span class="add"></span><span class="add">## 확정한 가정</span><span class="add"></span><span class="add mark">AI가 제안하고 사용자가 승인했다 (2026-11-16).</span><span class="skip">… 13줄 생략 (가정 4개, 근거 표의 머리말과 앞의 4행) …</span><span class="add mark">| 가입과 로그인은 인증 없이 된다 | `openapi.yml` (`security` 항목 없음). 킥오프 가설 2의 반례다 |</span></pre>
+    <p>세 가지를 보십시오.</p>
+    <ul>
+      <li><b>원본과 다른 점</b> — "아이디어만 가져온다"(킥오프 6.6)가 처음으로 실제 결정이 됐습니다. 원본을 따르지 않은 곳과 이유가 표에 있습니다.</li>
+      <li><b>확정한 가정</b> — 원본에도 없고 사용자가 말하지도 않은 것을 AI가 채웠습니다. 그 사실을 문장으로 남겼습니다.</li>
+      <li><b>근거</b> — 의도마다 원본의 어디에서 읽었는지 적었습니다. 마지막 줄은 앞 커밋의 검토에서 찾은 가설 2의 반례를 바로잡습니다.</li>
+    </ul>
+    <p class="bridge">spec은 "회원", "사용자 이름", "액세스 토큰"이라는 말을 씁니다. 그 말의 뜻은 아직 정하지 않았습니다. 다음 문서가 정합니다.</p>
+  </div>
+
+  <div class="step">
+    <h3>단계 2 — 말을 하나로 정하고, 규칙에 번호를 붙인다 (domain)</h3>
+    <p class="why">왜 이 단계인가: 원본은 <code>user</code>라고 부릅니다. 사용자는 슬라이스를 "회원 정보 조회"라고 불렀습니다. 문서, 대화, 코드가 서로 다른 말을 쓰면 같은 것을 두 번 설명하게 됩니다.</p>
+    <p class="file-role"><b>docs/domain/01-member.md</b> — 회원 도메인의 용어 9개와 규칙 10개입니다. 새 파일입니다 (52줄).</p>
+<pre class="diff"><span class="add">| 회원 | `Member` | 가입한 사람. 이 도메인의 중심이다 |</span><span class="skip">… 6줄 생략 (용어 6개) …</span><span class="add">| 액세스 토큰 | `AccessToken` | 로그인의 증거. 이후의 요청에 낸다 |</span><span class="add"></span><span class="add mark">쓰지 않는 말: "유저", "사용자"(회원으로 쓴다), "계정", "닉네임"(사용자 이름으로 쓴다).</span><span class="skip">… 4줄 생략 …</span><span class="add mark">- **액세스 토큰**은 도메인 모델이 아니다. 인증 기술의 산출물이다. 도메인은 "누가 요청했는가"(회원의 식별자)만 안다.</span><span class="skip">… 9줄 생략 (규칙 표의 머리말, R1 ~ R5) …</span><span class="add">| R6 | 이메일은 회원마다 다르다. | 가입 |</span><span class="add">| R7 | 사용자 이름은 회원마다 다르다. | 가입 |</span><span class="skip">… 3줄 생략 (R8 ~ R10) …</span><span class="add"></span><span class="add mark">R6과 R7은 회원 하나가 혼자 지킬 수 없다. 다른 회원을 알아야 하기 때문이다. 그래서 가입을 처리하는 곳이 저장소에 물어서 지킨다.</span></pre>
+    <p>용어 표에는 "코드 이름" 열이 있습니다. 한국어 용어와 영어 식별자를 미리 짝지었습니다. 구현할 때 이름을 다시 고민하지 않습니다.</p>
+    <p>"쓰지 않는 말"의 목록이 용어 표만큼 중요합니다. 금지한 말이 있어야 한 개념에 한 용어가 유지됩니다.</p>
+    <p>규칙 표의 세 번째 열은 <b>"지키는 곳"</b>입니다. R2(이메일의 형식)는 이메일 값 객체가 혼자 지킵니다. R6(유일성)은 그럴 수 없습니다. 이 구분이 나중에 테스트의 종류를 정합니다. 혼자 지키는 규칙은 단위 테스트로, 저장소가 필요한 규칙은 수용 테스트로 확인합니다.</p>
+    <p class="bridge">도메인은 "저장하는 것"과 "해시하는 것"이 필요하다고만 말합니다. 그것을 무엇으로 만드는지는 말하지 않습니다. 그 답이 ADR입니다.</p>
+  </div>
+
+  <div class="step">
+    <h3>단계 3 — 기술 결정을 하나씩, 이유와 함께 적는다 (ADR 5개)</h3>
+    <p class="why">왜 이 단계인가: spec과 domain은 기술을 모릅니다. 그래서 "어떻게"는 전부 여기에 모입니다. 결정 하나에 파일 하나입니다. 결정을 바꿀 때 그 파일만 고치면 됩니다.</p>
+
+    <div class="tablewrap">
+    <table>
+      <tr><th>ADR</th><th>결정</th><th>누가 정했는가</th><th>닫은 질문</th></tr>
+      <tr><td>0001</td><td>기술 스택</td><td>사용자</td><td>킥오프 6.7을 옮김</td></tr>
+      <tr><td>0002</td><td>헥사고날, ArchUnit 규칙 5개</td><td>스타일: 사용자. 세부: AI 제안, 사용자 승인</td><td>킥오프 열린 질문 9</td></tr>
+      <tr><td>0003</td><td>JWT + Spring Security</td><td>방식: 사용자. 세부: AI 제안, 사용자 승인</td><td>—</td></tr>
+      <tr><td>0004</td><td>테스트 먼저 (TDD)</td><td>사용자</td><td>킥오프 열린 질문 8</td></tr>
+      <tr><td>0005</td><td>API 규약</td><td>AI 제안, 사용자 승인</td><td>spec이 비워 둔 "API의 모양"</td></tr>
+    </table>
+    </div>
+
+    <p class="file-role"><b>docs/adr/0002-hexagonal-architecture.md</b> — 패키지의 구조와 의존의 방향을 정합니다. ArchUnit 테스트의 원본이 됩니다.</p>
+<pre class="diff"><span class="add mark">- 상태: 승인 (2026-11-16). 스타일은 사용자가 결정했다. 세부 규칙은 AI가 제안하고 사용자가 승인했다.</span><span class="skip">… 9줄 생략 (맥락, 패키지 표의 머리말) …</span><span class="add">| `domain` | 회원, 값 객체, 도메인 규칙 | 없음 (Java, JPA 애너테이션, Lombok만) |</span><span class="add">| `application` | 유스케이스, 포트(들어오는 것, 나가는 것) | `domain` |</span><span class="add">| `adapter` | 웹, 영속성, 보안 | `application`, `domain` |</span><span class="skip">… 2줄 생략 …</span><span class="add">1. `domain`은 `application`과 `adapter`에 의존하지 않는다.</span><span class="add">2. `application`은 `adapter`에 의존하지 않는다.</span><span class="add">3. `domain`은 Spring에 의존하지 않는다.</span><span class="add">4. `adapter`끼리는 서로 의존하지 않는다. (웹은 영속성을 모른다.)</span><span class="add">5. 웹 어댑터는 들어오는 포트를 통해서만 `application`을 쓴다.</span><span class="add"></span><span class="add mark">도메인 엔티티에 JPA 애너테이션을 직접 붙인다. 영속성용 클래스를 따로 두지 않는다.</span></pre>
+    <p>규칙 5개는 문장이지만, 각각 ArchUnit 테스트 하나로 바뀔 수 있게 썼습니다. "~에 의존하지 않는다"의 형태입니다.</p>
+    <p>표시한 마지막 줄은 타협입니다. 순수한 헥사고날에서는 도메인이 JPA를 모릅니다. 여기에서는 압니다. 매핑 코드를 없애는 대가로 순수성을 줄였습니다. 이 문서의 "결과"와 "버린 대안" 절이 그 거래를 적어 둡니다.</p>
+    <p>상태 줄을 보십시오. "승인"이라는 결과와 함께 <b>누가 제안했는지</b>가 남아 있습니다.</p>
+
+    <p class="file-role"><b>docs/adr/0003-authentication.md</b> — 액세스 토큰과 비밀번호 해시를 어떤 기술로 만드는지 정합니다.</p>
+<pre class="diff"><span class="add">- 액세스 토큰은 JWT다. 서버는 토큰을 저장하지 않는다.</span><span class="add">- Spring Security를 쓴다. 필터 체인이 토큰을 검사한다.</span><span class="add">- 토큰은 `Authorization: Bearer &lt;토큰&gt;` 헤더로 받는다.</span><span class="add">- 토큰에는 회원의 식별자와 만료 시각만 넣는다. 유효 시간은 1시간이다.</span><span class="add">- 비밀번호는 Spring Security의 `PasswordEncoder`(BCrypt)로 해시한다.</span><span class="add mark">- 가입과 로그인만 인증 없이 허용한다. 나머지는 모두 인증이 필요하다.</span><span class="skip">… 4줄 생략 …</span><span class="add">- 비밀번호 해시와 토큰 발급은 `application`의 나가는 포트다.</span><span class="add mark">- Spring Security와 JWT 라이브러리는 `adapter`의 보안 부분에만 있다. `domain`과 `application`은 이것을 모른다.</span></pre>
+    <p>표시한 첫 줄은 킥오프 가설 2의 고친 판입니다. 처음에는 "변경은 모두 인증이 필요하다"였습니다. 이제는 예외 두 개를 이름으로 적습니다.</p>
+    <p>표시한 둘째 줄은 ADR-0002와 ADR-0003을 잇습니다. 보안 라이브러리가 들어갈 수 있는 패키지를 한 곳으로 제한합니다.</p>
+
+    <p class="file-role"><b>docs/adr/0004-verification-tdd.md</b> — 무엇으로 검증하는지 정합니다. 브레인스토밍에서 폐기한 아이디어 D의 빈자리를 채웁니다.</p>
+<pre class="diff"><span class="add">| 수용 테스트 | HTTP 요청과 응답. 서버 전체를 띄운다 | Spec의 수용 기준 (AC) |</span><span class="add">| 도메인 단위 테스트 | 도메인의 규칙. Spring 없이 돈다 | Domain의 규칙 (R) |</span><span class="add">| 아키텍처 테스트 | 의존 방향 | [ADR-0002](0002-hexagonal-architecture.md)의 규칙 |</span><span class="add"></span><span class="add">- 순서: 수용 테스트(실패) → 도메인 단위 테스트(실패) → 구현 → 통과 → 정리.</span><span class="add mark">- 테스트의 이름에 AC나 R의 ID를 넣는다. 수용 기준 하나에 테스트가 하나 이상 있다.</span></pre>
+    <p>이 표가 이 커밋의 구조를 요약합니다. 테스트 세 종류가 문서 세 종류에 하나씩 대응합니다. spec → 수용 테스트, domain → 단위 테스트, ADR → 아키텍처 테스트.</p>
+    <p>표시한 줄이 2절의 그림에서 점선으로 그린 부분입니다. 문서의 ID가 코드까지 이어지는 방법입니다.</p>
+
+    <p class="file-role"><b>docs/adr/0005-api-conventions.md</b> — spec이 일부러 비워 둔 API의 모양을 정합니다.</p>
+<pre class="diff"><span class="add">| 가입 | `POST /api/members` | 201 |</span><span class="add">| 로그인 | `POST /api/auth/login` | 200 |</span><span class="add">| 내 정보 조회 | `GET /api/members/me` | 200 |</span><span class="skip">… 4줄 생략 …</span><span class="add">| 값이 비었거나 형식이 틀리다 | 400 |</span><span class="add">| 로그인 실패, 토큰이 없거나 틀리다 | 401 |</span><span class="add">| 이메일이나 사용자 이름이 이미 있다 | 409 |</span><span class="skip">… 1줄 생략 …</span><span class="add">- 요청과 응답은 JSON이다. 원본의 `{"user": {...}}` 같은 겉껍질은 쓰지 않는다.</span><span class="add">- 오류의 본문은 RFC 9457 Problem Details 형식이다. Spring의 `ProblemDetail`을 쓴다.</span><span class="skip">… 5줄 생략 …</span><span class="add mark">- 원본의 Hurl 테스트는 이 API에서 통과하지 않는다. 의도한 것이다.</span></pre>
+    <p>경로가 <code>/users</code>에서 <code>/members</code>로 바뀌었습니다. 단계 2의 용어 결정이 여기까지 내려온 것입니다.</p>
+    <p>표시한 줄은 되돌릴 수 없는 지점을 적습니다. 이 ADR을 받아들이면 원본의 테스트는 쓸 수 없습니다. 그래서 ADR-0004가 필요했습니다.</p>
+
+    <p class="file-role"><b>docs/adr/0001-tech-stack.md</b> — 킥오프 6.7의 스택 표를 ADR의 형식으로 옮겼습니다. 새로운 결정은 없습니다. 한 줄이 추가됐습니다.</p>
+<pre class="diff"><span class="add">- 대안을 비교하지 않았다. 사용자가 익숙한 스택을 골랐다.</span><span class="add mark">- Spring Boot의 버전 번호는 프로젝트를 만들 때 확인해서 이 문서에 적는다.</span></pre>
+    <p>표시한 줄은 앞 커밋의 검토 노트("최신 버전은 읽는 날짜에 따라 뜻이 다르다")에 대한 답입니다. 지금 번호를 정하지 않고, 정할 시점을 정했습니다.</p>
+    <p class="bridge">무엇을, 어떤 규칙으로, 어떤 기술로 만드는지가 정해졌습니다. 남은 것은 순서입니다.</p>
+  </div>
+
+  <div class="step">
+    <h3>단계 4 — 순서와 확인할 것만 적는다 (plan)</h3>
+    <p class="why">왜 이 단계인가: 앞의 세 문서에는 시간이 없습니다. plan은 그것들을 시간 순서로 늘어놓습니다. 그리고 새 내용을 쓰지 않습니다. 앞 문서의 ID만 가리킵니다.</p>
+    <p class="file-role"><b>docs/plan/01-member-slice.md</b> — 작업 7개와 각 작업에서 검증할 내용입니다. 새 파일입니다 (40줄). 코드와 ERD가 없습니다.</p>
+<pre class="diff"><span class="add">| 1 | 프로젝트 뼈대를 만든다. Spring Boot의 버전을 확인해서 ADR-0001에 적는다. | 빌드가 성공한다. 빈 애플리케이션이 뜬다. |</span><span class="add mark">| 2 | 아키텍처 테스트를 쓴다. 패키지 `domain`, `application`, `adapter`를 만든다. | ADR-0002의 규칙 1~5가 테스트로 있다. 규칙을 일부러 어기면 테스트가 실패한다. |</span><span class="add">| 3 | 도메인을 만든다: 회원, 이메일, 사용자 이름, 비밀번호 해시. | R1, R2, R3, R5. Spring 없이 테스트가 돈다. |</span><span class="add">| 4 | 가입을 만든다 (목표 1). | AC-1.1 ~ AC-1.7. R4, R6, R7. 저장된 값이 비밀번호의 원문이 아니다. |</span><span class="add">| 5 | 로그인을 만든다 (목표 2). | AC-2.1 ~ AC-2.4. R8, R9. 없는 이메일과 틀린 비밀번호의 응답이 같다. |</span><span class="add">| 6 | 내 정보 조회를 만든다 (목표 3). | AC-3.1 ~ AC-3.4. R10. 만료된 토큰과 위조된 토큰을 거부한다. |</span><span class="skip">… 20줄 생략 (작업 7, 안쪽 순서 6단계, 끝의 조건의 머리말) …</span><span class="add">- Spec 01의 수용 기준 15개에 모두 통과하는 테스트가 있다.</span><span class="add">- Domain 01의 규칙 10개에 모두 통과하는 테스트가 있다.</span></pre>
+    <p>표시한 작업 2를 보십시오. 아키텍처 테스트가 도메인(작업 3)보다 <b>먼저</b>입니다. 지킬 코드가 생기기 전에 규칙을 먼저 세웁니다. 검증할 내용에는 "일부러 어기면 실패한다"가 있습니다. 빈 패키지에서는 어떤 규칙도 통과하기 때문에, 규칙이 실제로 잡는지를 따로 확인합니다.</p>
+    <p>plan이 가리키는 ID를 세어 보았습니다. 빠진 것과 겹친 것이 없습니다.</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>작업</th><th>수용 기준 (AC)</th><th>규칙 (R)</th></tr>
+      <tr><td>3. 도메인</td><td>—</td><td>R1, R2, R3, R5</td></tr>
+      <tr><td>4. 가입</td><td>AC-1.1 ~ 1.7 (7개)</td><td>R4, R6, R7</td></tr>
+      <tr><td>5. 로그인</td><td>AC-2.1 ~ 2.4 (4개)</td><td>R8, R9</td></tr>
+      <tr><td>6. 내 정보 조회</td><td>AC-3.1 ~ 3.4 (4개)</td><td>R10</td></tr>
+      <tr><th>합계</th><th>15개 (spec의 전부)</th><th>10개 (domain의 전부)</th></tr>
+    </table>
+    </div>
+    <p class="bridge">새 문서 8개가 끝났습니다. 그런데 앞 단계의 문서(킥오프)는 아직 "질문 2개가 열려 있다"고 말합니다. 그것을 닫아야 합니다.</p>
+  </div>
+
+  <div class="step">
+    <h3>단계 5 — 앞 단계의 문서를 닫고, 과정을 남긴다 (킥오프, 일지)</h3>
+    <p class="why">왜 이 단계인가: 앞 커밋의 검토에서 배운 것이 있습니다. 뒤의 결정이 앞의 문장을 낡게 만듭니다. 그래서 새 문서를 쓴 뒤에 앞의 문서를 바로 고쳤습니다.</p>
+    <p class="file-role"><b>docs/brainstorming/00-kickoff.md</b> — 브레인스토밍의 결론입니다. 이 커밋에서 유일하게 삭제(−)가 있는 파일입니다.</p>
+<pre class="diff"><span class="del">8. 무엇으로 검증하는가? (6.6에서 생김. 원본 Hurl 테스트를 수용 테스트로 쓰지 않으므로 빈칸이다.)</span><span class="del">9. ArchUnit으로 어떤 아키텍처 규칙을 강제하는가? (6.7에서 생김)</span><span class="add">8. ~~무엇으로 검증하는가?~~ → [ADR-0004](../adr/0004-verification-tdd.md)에서 결정 (테스트 먼저)</span><span class="add">9. ~~ArchUnit으로 어떤 아키텍처 규칙을 강제하는가?~~ → [ADR-0002](../adr/0002-hexagonal-architecture.md)에서 결정 (헥사고날)</span><span class="ctx"></span><span class="del">처음의 질문 7개는 모두 닫혔다. 결정하면서 새 질문 2개(8, 9)가 생겼다. 이 둘은 아직 열려 있다.</span><span class="add">브레인스토밍의 질문은 모두 닫혔다. 각 문서의 제안과 가정도 사용자가 모두 승인했다 (2026-11-16).</span><span class="ctx"></span><span class="del">## 8. 다음 베이비 스텝</span><span class="add">## 8. 브레인스토밍 이후의 문서</span><span class="ctx"></span><span class="del">사용자의 지시를 기다린다.</span><span class="skip">… 4줄 생략 (새 문서 4종의 링크) …</span><span class="add"></span><span class="add mark">3절의 가설 2("변경은 모두 인증이 필요하다")는 틀렸다. 가입과 로그인은 인증 없이 된다. Spec 01의 "근거"에 반영했다.</span></pre>
+    <p>질문 8과 9는 지워지지 않고 그어졌습니다. 이 저장소의 관례입니다. 앞에서는 닫힌 질문이 킥오프 문서 안의 결정(6.x)을 가리켰습니다. 이제는 <b>다른 문서</b>(ADR)를 가리킵니다. 질문의 답이 사는 곳이 브레인스토밍 밖으로 옮겨졌습니다.</p>
+    <p>표시한 줄은 가설 2를 고친 방법입니다. 3절의 원래 문장은 그대로 두고, 끝에 "틀렸다"를 덧붙였습니다. 틀린 가설도 기록으로 남습니다.</p>
+
+    <p class="file-role"><b>docs/journal/2026-11-16.md</b> — 작업 일지입니다. 스텝 13, 14, 15가 추가됐습니다 (+57줄).</p>
+<pre class="diff"><span class="add">---</span><span class="add"></span><span class="add mark">현재 단계: **spec · domain · ADR · plan 작성** (구현 전)</span><span class="skip">… 13줄 생략 (스텝 13의 요청, 한 일, 질문 표의 머리말) …</span><span class="add">  | 인증 방식 | JWT + Spring Security / JWT 직접 구현 / 서버 저장 토큰 / HTTP 세션 | JWT + Spring Security |</span><span class="add">  | 아키텍처 스타일 | 헥사고날 / 계층형 기능별 패키지 / 도메인 중심 계층형 | 헥사고날 |</span><span class="add">  | 검증 방법 | 테스트 먼저 (TDD) / 구현 후 테스트 / 수용 테스트만 | 테스트 먼저 (TDD) |</span><span class="skip">… 30줄 생략 (스텝 13의 결정·버린 대안·관찰, 스텝 14의 앞부분) …</span><span class="add mark">  - 사용자는 8개를 하나씩 검토하지 않고 한 번에 승인했다. AI가 "제안"으로 표시하고 영향이 큰 것을 짚어 주면, 사람의 검토 비용이 줄어든다. 그러나 묶음 승인에서는 개별 항목이 덜 검토된다. 구현 중에 문제가 나오면 ADR을 고친다.</span></pre>
+    <p>일지에만 있는 정보는 <b>고르지 않은 선택지</b>입니다. ADR의 "버린 대안"은 이유를 적고, 일지의 표는 질문이 실제로 어떻게 나왔는지를 적습니다.</p>
+    <p>표시한 마지막 줄은 이 process의 약점을 스스로 적은 것입니다. 5절의 검토 노트가 바로 그 "덜 검토된 항목"을 다룹니다.</p>
+    <p class="bridge">이것으로 설계 단계가 끝났습니다. 다음 커밋은 plan의 작업 1입니다. 처음으로 코드가 들어옵니다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>4. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>docs/journal/2026-11-16.md</code> 스텝 15 — 이 커밋 자체의 기록입니다. 커밋 전에 썼습니다. 그래서 커밋 번호가 없습니다.</li>
+    <li><code>docs/spec/01-member-signup-login.md</code> "범위 밖" 절 — 수정, 탈퇴, <code>bio</code>, <code>image</code>, 로그아웃, 토큰 갱신, 이메일 인증, 비밀번호 재설정을 뺐습니다.</li>
+    <li><code>docs/plan/01-member-slice.md</code> "방식"과 "작업 4~6의 안쪽 순서" 절 — 작업마다 반복하는 6단계(수용 테스트 → 도메인 → 유스케이스와 포트 → 나가는 어댑터 → 웹 어댑터 → 정리)를 적었습니다.</li>
+    <li>각 ADR의 "결과"와 "버린 대안" 절 — 3절에서 일부만 인용했습니다. 모든 ADR에 같은 형식으로 있습니다.</li>
+    <li>이름 변경, 설정, 생성된 파일 같은 기계적인 변경은 없습니다.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>5. 검토 노트</h2>
+  <p>실행할 코드가 없으므로, 문서에 경계 입력을 넣어 보았습니다. "이 요청이 오면 문서는 무엇이라고 답하는가"를 물었습니다. 문서들이 서로 다르게 답하거나 답이 없는 곳이 아래에 있습니다.</p>
+  <ul>
+    <li>
+      <span class="tag ok">확인됨</span> <b>비밀번호의 "64자"와 BCrypt의 "72바이트"는 단위가 다릅니다.</b>
+      입력: 한글 64자의 비밀번호. UTF-8에서 한글 한 자는 3바이트이므로 192바이트입니다. AC-1.4와 R4는 이 비밀번호를 받습니다. BCrypt는 앞의 72바이트(한글 24자)만 씁니다.
+      결과: 앞의 24자가 같은 두 비밀번호가 같은 비밀번호가 됩니다. <span class="tag guess">추측</span> Spring Security의 버전에 따라서는 72바이트를 넘는 입력에 예외를 던질 수 있습니다. 그러면 가입이 서버 오류가 됩니다.
+      고치는 방법: R4의 단위를 바이트로 바꾸거나, ADR-0003의 해시 알고리즘을 바꿉니다.
+    </li>
+    <li>
+      <span class="tag ok">확인됨</span> <b>ADR-0005의 오류 형식이 401에는 저절로 적용되지 않습니다.</b>
+      입력: 토큰 없이 <code>GET /api/members/me</code> (AC-3.2). 이 요청은 Spring Security의 필터 체인에서 거부됩니다. 컨트롤러에 닿지 않습니다. 그래서 컨트롤러의 예외 처리가 만드는 Problem Details 본문이 붙지 않습니다.
+      결과: 기본 설정에서는 401 응답의 본문이 비어 있습니다. ADR-0005의 "오류의 본문은 Problem Details"와 어긋납니다. 인증 실패용 처리기를 따로 만들어야 합니다. plan의 작업 6에 이 검증이 없습니다.
+    </li>
+    <li>
+      <span class="tag ok">확인됨</span> <b>서버를 다시 시작하면 "주인이 없는 유효한 토큰"이 생깁니다.</b>
+      ADR-0001: H2는 인메모리이고, 다시 시작하면 회원이 사라집니다. ADR-0003: 토큰은 서버에 저장하지 않고 1시간 동안 유효합니다.
+      입력: 다시 시작하기 전에 받은 토큰으로 내 정보를 조회합니다. 서명 키가 설정에 고정돼 있으면 토큰은 통과합니다. 그러나 회원은 없습니다.
+      결과: spec에 이 경우의 수용 기준이 없습니다. 401인지, 404인지, 서버 오류인지 정해지지 않았습니다. AC-3.3에 "토큰의 주인이 없으면 거부한다"를 더하면 닫힙니다.
+    </li>
+    <li>
+      <span class="tag ok">확인됨</span> <b>이메일의 규칙 두 가지가 수용 기준까지 올라오지 않았습니다.</b>
+      (1) 가정 1과 R2는 이메일의 대소문자를 구분하지 않습니다. 그러나 <code>A@x.com</code>으로 가입하고 <code>a@x.com</code>으로 다시 가입하거나 로그인하는 수용 기준이 없습니다.
+      (2) 로그인에서 형식이 틀린 이메일(<code>abc@</code>)을 내는 경우가 없습니다. AC-2.4는 빈 값만 다룹니다. 원본은 이 경우를 따로 테스트합니다.
+      결과: (2)는 구현에 따라 400(형식 오류)도 되고 401(로그인 실패)도 됩니다. 두 구현 모두 현재의 spec을 통과합니다.
+    </li>
+    <li>
+      <span class="tag ok">확인됨</span> <b>R9가 막으려는 것을 AC-1.5가 열어 둡니다.</b>
+      R9와 AC-2.3: 로그인이 실패하면 이메일이 있는지 없는지를 드러내지 않습니다. AC-1.5: 이미 있는 이메일로 가입하면 거부합니다 (409).
+      결과: 이메일이 가입돼 있는지는 가입 요청으로 알아낼 수 있습니다. R9의 보호는 로그인에만 있습니다. 원본도 같습니다. 받아들일 수 있는 선택이지만, 문서에 "의도한 것"이라고 적혀 있지 않습니다.
+      <span class="tag guess">추측</span> 없는 이메일은 BCrypt 비교를 건너뛰므로 응답 시간으로도 구분될 수 있습니다.
+    </li>
+    <li>
+      <span class="tag ok">확인됨</span> <b>포트가 어느 패키지에 있는지를 두 문서가 다르게 말합니다.</b>
+      Domain 01: "<b>도메인이</b> 밖에 요구하는 것 … 필요한 것은 인터페이스로 요구한다." ADR-0003: "비밀번호 해시와 토큰 발급은 <code>application</code>의 나가는 포트다."
+      결과: 저장 포트와 해시 포트를 <code>domain</code>에 둘지 <code>application</code>에 둘지가 정해지지 않았습니다. plan의 작업 2에서 패키지를 만들 때 바로 부딪칩니다. ArchUnit의 규칙 1~5는 두 배치를 모두 통과시킵니다.
+    </li>
+    <li>
+      <span class="tag guess">추측</span> <b>"만료된 토큰을 거부한다"를 테스트하려면 시간을 다룰 방법이 필요합니다.</b>
+      ADR-0003: 유효 시간은 1시간입니다. plan의 작업 6: "만료된 토큰과 위조된 토큰을 거부한다."
+      결과: 테스트가 1시간을 기다릴 수 없습니다. 시각을 바꿀 수 있는 장치(예: 주입하는 시계)나 이미 만료된 토큰을 만드는 방법이 필요합니다. 어느 문서에도 없습니다. 이것은 포트가 하나 더 생긴다는 뜻일 수 있습니다.
+    </li>
+    <li>
+      <span class="tag guess">추측</span> <b>웹 어댑터가 도메인 엔티티를 그대로 응답으로 내보낼 수 있습니다.</b>
+      ADR-0002의 표는 <code>adapter</code>가 <code>domain</code>에 의존하는 것을 허용합니다. 회원 엔티티는 비밀번호 해시를 가집니다 (R1).
+      결과: 컨트롤러가 회원 엔티티를 그대로 JSON으로 바꾸면 해시가 응답에 나갑니다. AC-1.7은 "비밀번호"가 없다고만 말합니다. 해시에 대한 말은 없습니다. AC-1.7을 "비밀번호와 비밀번호 해시"로 넓히면 수용 테스트가 이것을 잡습니다.
+    </li>
+  </ul>
+
+  <h3>확인해서 문제가 없었던 것</h3>
+  <ul>
+    <li>plan의 "수용 기준 15개"와 "규칙 10개"는 spec과 domain의 실제 개수와 같습니다. 작업 3~6이 가리키는 ID에 빠진 것과 겹친 것이 없습니다 (3절의 표).</li>
+    <li>킥오프 문서의 열린 질문 9개는 모두 답이 있는 곳을 가리킵니다. 링크의 경로가 실제 파일과 맞습니다.</li>
+  </ul>
+
+  <h3>작성자에게 묻는 질문</h3>
+  <ul>
+    <li>일지의 맨 위 3행은 아직 "현재 단계: 브레인스토밍"입니다. 이 커밋은 중간에 두 번째 "현재 단계" 줄을 넣었습니다. 한 파일에 두 개를 두는 것이 의도입니까, 맨 위의 줄을 고칠 것입니까?</li>
+    <li>위의 노트 중 앞의 6개는 구현 전에 문서로 닫을 수 있습니다. 지금 닫을 것입니까, 구현 중에 부딪칠 때 ADR을 고칠 것입니까? 뒤쪽을 고르면 "문서가 구현에서 어떻게 틀렸는가"가 발표의 사례가 됩니다.</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>
