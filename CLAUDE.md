@@ -15,5 +15,5 @@
 ## 문서 언어
 
 - 이 프로젝트의 모든 문서는 **반드시 한국어로 작성해야 한다.** (MUST)
-- 대상: `docs/` 아래의 모든 문서(brainstorming, spec, domain, adr, plan)와 이 파일.
+- 대상: `docs/` 아래의 모든 문서(brainstorming, journal, spec, domain, adr, plan)와 이 파일.
 - 코드 식별자, 파일 경로, API 필드 이름, 기술 용어는 원문(영어) 그대로 쓸 수 있다. (MAY)
