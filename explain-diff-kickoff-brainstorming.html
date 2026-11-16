@@ -4,41 +4,56 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>첫 커밋 읽기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
 :root{
-  --bg:#fbfaf7; --fg:#1f2328; --muted:#5f6670; --card:#ffffff; --line:#e3e0d8;
-  --accent:#2f6f5e; --accent-soft:#e3efe9;
-  --add-bg:#e6f4ea; --add-fg:#1a5e2e; --del-bg:#fbe9e9; --del-fg:#8a1f1f;
-  --code-bg:#f4f2ec; --hl:#fff3c4;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
-  --sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#16181b; --fg:#e6e6e3; --muted:#9aa0a6; --card:#1e2125; --line:#30343a;
-    --accent:#7cc4ad; --accent-soft:#1f3530;
-    --add-bg:#16301f; --add-fg:#8fd6a4; --del-bg:#3a1c1c; --del-fg:#f0a3a3;
-    --code-bg:#202328; --hl:#4a4220;
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#16181b; --fg:#e6e6e3; --muted:#9aa0a6; --card:#1e2125; --line:#30343a;
-  --accent:#7cc4ad; --accent-soft:#1f3530;
-  --add-bg:#16301f; --add-fg:#8fd6a4; --del-bg:#3a1c1c; --del-fg:#f0a3a3;
-  --code-bg:#202328; --hl:#4a4220;
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 var(--serif)}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
 main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
-h1,h2,h3,h4{font-family:var(--sans);line-height:1.25}
-h1{font-size:2rem;margin:0 0 .3em}
-h2{font-size:1.4rem;margin:2.4em 0 .6em;padding-top:.4em;border-top:2px solid var(--line)}
-h3{font-size:1.1rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
 .meta{font:14px/1.5 var(--sans);color:var(--muted)}
 .meta span+span::before{content:" · "}
 .assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
-.intuition{font-size:1.25rem;font-style:italic;border-left:4px solid var(--accent);padding:6px 0 6px 18px;margin:1em 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
 code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
 details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
 details summary{cursor:pointer;font:600 15px var(--sans)}
@@ -51,6 +66,7 @@ figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top
 .file-role b{font-family:var(--mono);font-weight:600}
 .bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
 .bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
 pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
 pre.diff span{display:block;padding:0 14px;white-space:pre}
 pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
@@ -60,7 +76,14 @@ pre.diff .del::before{content:"- "}
 pre.diff .ctx::before{content:"  "}
 pre.diff .skip{color:var(--muted);font-style:italic}
 pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
 ul.other{font:15px/1.6 var(--sans)}
+/* document-specific rules (kept from the original) */
 table{border-collapse:collapse;width:100%;font:14px/1.5 var(--sans);margin:12px 0}
 th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 th{color:var(--muted);font-weight:600}
@@ -76,7 +99,10 @@ svg .mut{fill:var(--muted)}
 svg .acc{fill:var(--accent)}
 @media print{
   body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
   details{border:none;padding:0}
   details>summary{list-style:none}
   pre.diff{white-space:pre-wrap;break-inside:avoid}

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프로젝트 뼈대 설명</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:700}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">explain-diff · plan 01 · 작업 1</p>
+  <h1>설계 문서 8개 뒤의 첫 코드: 빈 Spring Boot 4 애플리케이션</h1>
+  <div class="meta"><span>commit 53667da (로컬, push 전)</span><span>13 files</span><span>+522 / −4</span></div>
+  <div class="assumption"><b>독자 가정.</b> Spring과 Gradle을 잘 아는 독자다. Spring Boot의 기본 설명은 뺐다. Spring Boot 4에서 바뀐 것과, 이 커밋에서 AI가 정한 것에 집중했다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>이 커밋의 앞: 코드가 0줄이었다</h3>
+  <p>저장소에는 문서만 있었다. 커밋 4개, 설계 문서 8개(spec 1, domain 1, ADR 5, plan 1)다. 이 커밋은 <a href="docs/plan/01-member-slice.md">plan 01</a>의 작업 1이다. plan은 작업 1에 두 가지만 요구한다.</p>
+  <table>
+    <tr><th>plan의 요구</th><th>뜻</th></tr>
+    <tr><td>빌드가 성공한다</td><td><code>./gradlew build</code>가 끝까지 간다</td></tr>
+    <tr><td>빈 애플리케이션이 뜬다</td><td>기능이 없는 서버가 시작한다</td></tr>
+  </table>
+  <p>ADR-0001에는 숙제가 하나 있었다: "Spring Boot의 버전 번호는 프로젝트를 만들 때 확인해서 이 문서에 적는다."</p>
+
+  <h3>Spring Boot 4에서 바뀐 것 3개</h3>
+  <p>이 커밋의 빌드 파일을 읽으려면 이 3개가 필요하다. Spring Boot 3의 기억으로 읽으면 낯설다.</p>
+  <table>
+    <tr><th>무엇</th><th>Boot 3</th><th>Boot 4 (이 커밋)</th></tr>
+    <tr><td>웹 스타터</td><td><code>spring-boot-starter-web</code></td><td><code>spring-boot-starter-webmvc</code></td></tr>
+    <tr><td>테스트 스타터</td><td><code>spring-boot-starter-test</code> 하나</td><td>기술마다 하나: <code>-webmvc-test</code>, <code>-data-jpa-test</code></td></tr>
+    <tr><td>따라오는 버전</td><td>Spring 6, Jackson 2, JUnit 5</td><td>Spring 7, Jackson 3, JUnit 6</td></tr>
+  </table>
+  <details>
+    <summary>테스트 스타터가 왜 나뉘었는가</summary>
+    <p>Spring Boot 4는 자동 설정을 기술마다 작은 모듈로 쪼갰다. 테스트 지원도 같이 쪼개졌다. 예를 들어 <code>MockMvc</code>의 테스트 지원은 <code>spring-boot-webmvc-test</code>에 있다. <code>@DataJpaTest</code>는 <code>spring-boot-data-jpa-test</code>에 있다. 두 스타터가 모두 <code>spring-boot-starter-test</code>(JUnit, AssertJ, Mockito)를 끌어온다. 그래서 빌드 파일에 <code>spring-boot-starter-test</code>가 직접 보이지 않는다.</p>
+  </details>
+
+  <p>문제는 이것이다: 승인된 문서는 "Spring Boot 최신 안정 버전"이라고만 말한다. 코드는 숫자가 필요하다.</p>
+</section>
+
+<section id="idea">
+  <h2>2. 핵심 아이디어</h2>
+  <p class="intuition">숫자 3개만 직접 고른다. 나머지 버전은 모두 그 숫자를 따라오게 한다. 그리고 아직 쓰지 않는 것은 넣지 않는다.</p>
+  <p>직접 고른 숫자는 Spring Boot 4.1.2, Java 25, Gradle 9.9.1이다. Spring, Hibernate, Tomcat, H2, Lombok, JUnit의 버전은 빌드 파일에 없다. Spring Boot가 정한다. 의존성도 최소다. ADR-0001의 스택에서 지금 필요한 4개만 있다. Spring Security(ADR-0003), 검증, ArchUnit(ADR-0002)은 처음 쓰는 작업에서 더한다. 그러면 "이 의존성은 왜 들어왔는가"의 답이 커밋 역사에 남는다.</p>
+  <figure>
+    <svg viewBox="0 0 720 300" role="img" aria-label="직접 고른 버전 3개와 따라온 버전 6개">
+      <style>
+        .b{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+        .p{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+        .t{font:600 15px var(--sans);fill:var(--fg)}
+        .s{font:13px var(--mono);fill:var(--muted)}
+        .h{font:700 13px var(--mono);fill:var(--accent);letter-spacing:.06em}
+        .a{stroke:var(--muted);stroke-width:1.5;fill:none}
+      </style>
+      <text x="20" y="24" class="h">직접 고른 것 (빌드 파일에 숫자가 있다)</text>
+      <rect x="20" y="36" width="210" height="60" rx="8" class="p"/><text x="36" y="62" class="t">Spring Boot</text><text x="36" y="82" class="s">4.1.2</text>
+      <rect x="255" y="36" width="210" height="60" rx="8" class="p"/><text x="271" y="62" class="t">Java</text><text x="271" y="82" class="s">25 (toolchain)</text>
+      <rect x="490" y="36" width="210" height="60" rx="8" class="p"/><text x="506" y="62" class="t">Gradle</text><text x="506" y="82" class="s">9.9.1 (wrapper)</text>
+      <path d="M125 96 V140 M125 140 H595 M125 140 V176 M360 140 V176 M595 140 V176" class="a"/>
+      <text x="20" y="166" class="h">따라온 것 (빌드 파일에 숫자가 없다)</text>
+      <rect x="20" y="176" width="210" height="48" rx="8" class="b"/><text x="36" y="197" class="t">Spring Framework</text><text x="36" y="215" class="s">7.0.10</text>
+      <rect x="255" y="176" width="210" height="48" rx="8" class="b"/><text x="271" y="197" class="t">Hibernate ORM</text><text x="271" y="215" class="s">7.4.13.Final</text>
+      <rect x="490" y="176" width="210" height="48" rx="8" class="b"/><text x="506" y="197" class="t">Tomcat</text><text x="506" y="215" class="s">11.0.27</text>
+      <rect x="20" y="236" width="210" height="48" rx="8" class="b"/><text x="36" y="257" class="t">H2</text><text x="36" y="275" class="s">2.4.240</text>
+      <rect x="255" y="236" width="210" height="48" rx="8" class="b"/><text x="271" y="257" class="t">Lombok</text><text x="271" y="275" class="s">1.18.48</text>
+      <rect x="490" y="236" width="210" height="48" rx="8" class="b"/><text x="506" y="257" class="t">JUnit / Jackson</text><text x="506" y="275" class="s">6.0.3 / 3.1.7</text>
+    </svg>
+    <figcaption>아래 6개의 숫자는 <code>./gradlew dependencies</code>의 결과에서 읽었다. 파일에는 없다.</figcaption>
+  </figure>
+</section>
+
+<section id="walkthrough">
+  <h2>3. 변경을 순서대로 읽기</h2>
+
+  <div class="step">
+    <h3>스텝 1 — 버전 3개를 고정한다</h3>
+    <p class="why">왜: "최신 안정 버전"은 날마다 뜻이 바뀐다. 숫자로 바꿔야 누구의 컴퓨터에서나 같은 빌드가 된다.</p>
+    <p class="file-role"><b>build.gradle.kts</b> — 빌드의 정의다. 이 프로젝트에서 사람이 읽을 가치가 가장 큰 파일이다.</p>
+<pre class="diff"><span class="add">plugins {</span><span class="add">    java</span><span class="add">    id(&quot;org.springframework.boot&quot;) version &quot;4.1.2&quot;</span><span class="add">    id(&quot;io.spring.dependency-management&quot;) version &quot;1.1.7&quot;</span><span class="add">}</span><span class="add"> </span><span class="add">group = &quot;trealworld&quot;</span><span class="add">version = &quot;0.0.1-SNAPSHOT&quot;</span><span class="add"> </span><span class="add">java {</span><span class="add">    toolchain {</span><span class="add">        languageVersion = JavaLanguageVersion.of(25)</span><span class="add">    }</span><span class="add">}</span><span class="add"> </span><span class="add">repositories {</span><span class="add">    mavenCentral()</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li><code>version "4.1.2"</code> — Spring Initializr의 기본값이다. 같은 날 4.2.0은 RC2였다. RC와 SNAPSHOT은 "안정"이 아니므로 뺐다.</li>
+      <li><code>io.spring.dependency-management</code> — "따라오는 버전"을 만드는 플러그인이다. 이 플러그인 때문에 아래 의존성에 버전 번호가 없다.</li>
+      <li><code>toolchain</code> — Gradle을 실행하는 JDK와 코드를 컴파일하는 JDK를 나눈다. 컴파일은 항상 25로 한다.</li>
+      <li><code>group = "trealworld"</code> — AI가 정했다. Initializr의 기본값은 <code>com.example</code>이다.</li>
+    </ul>
+    <p class="file-role"><b>gradle/wrapper/gradle-wrapper.properties</b> — <code>./gradlew</code>가 내려받을 Gradle의 버전을 정한다.</p>
+<pre class="diff"><span class="add">distributionUrl=https\://services.gradle.org/distributions/gradle-9.9.1-bin.zip</span></pre>
+    <p>이 컴퓨터에 설치된 Gradle은 9.7.0이다. 빌드는 그것을 쓰지 않는다. wrapper가 9.9.1을 받아서 쓴다.</p>
+    <p class="bridge">도구의 버전이 정해졌다. 다음은 "무엇을 넣는가"다.</p>
+  </div>
+
+  <div class="step">
+    <h3>스텝 2 — 지금 쓰는 의존성만 넣는다</h3>
+    <p class="why">왜: plan의 요구는 "빈 애플리케이션이 뜬다"다. 그것에 필요한 것과 ADR-0001의 스택만 있으면 된다.</p>
+    <p class="file-role"><b>build.gradle.kts</b> (이어서)</p>
+<pre class="diff"><span class="add"> </span><span class="add">dependencies {</span><span class="add">    implementation(&quot;org.springframework.boot:spring-boot-starter-data-jpa&quot;)</span><span class="add">    implementation(&quot;org.springframework.boot:spring-boot-starter-webmvc&quot;)</span><span class="add">    compileOnly(&quot;org.projectlombok:lombok&quot;)</span><span class="add">    runtimeOnly(&quot;com.h2database:h2&quot;)</span><span class="add">    annotationProcessor(&quot;org.projectlombok:lombok&quot;)</span><span class="add">    testImplementation(&quot;org.springframework.boot:spring-boot-starter-data-jpa-test&quot;)</span><span class="add">    testImplementation(&quot;org.springframework.boot:spring-boot-starter-webmvc-test&quot;)</span><span class="add">    testCompileOnly(&quot;org.projectlombok:lombok&quot;)</span><span class="add">    testRuntimeOnly(&quot;org.junit.platform:junit-platform-launcher&quot;)</span><span class="add">    testAnnotationProcessor(&quot;org.projectlombok:lombok&quot;)</span><span class="add">}</span><span class="add"> </span><span class="add">tasks.withType&lt;Test&gt; {</span><span class="add">    useJUnitPlatform()</span><span class="add">}</span></pre>
+    <table>
+      <tr><th>ADR-0001의 항목</th><th>의존성</th><th>상태</th></tr>
+      <tr><td>Spring Boot (웹)</td><td><code>starter-webmvc</code></td><td>있다</td></tr>
+      <tr><td>JPA</td><td><code>starter-data-jpa</code></td><td>있다</td></tr>
+      <tr><td>H2</td><td><code>com.h2database:h2</code> (<code>runtimeOnly</code>)</td><td>있다</td></tr>
+      <tr><td>Lombok</td><td><code>compileOnly</code> + <code>annotationProcessor</code></td><td>있다. 아직 쓰는 코드는 없다</td></tr>
+      <tr><td>JUnit</td><td>테스트 스타터 2개가 끌어온다</td><td>있다 (6.0.3)</td></tr>
+      <tr><td>ArchUnit</td><td>—</td><td>없다. 작업 2에서 더한다</td></tr>
+    </table>
+    <p>볼 곳:</p>
+    <ul>
+      <li>Lombok이 4줄이다. <code>compileOnly</code>는 "컴파일할 때만 보인다"이고, <code>annotationProcessor</code>는 "컴파일할 때 코드를 만든다"다. jar에는 들어가지 않는다. 테스트 코드용으로 같은 2줄이 한 번 더 있다.</li>
+      <li><code>junit-platform-launcher</code> — Gradle이 JUnit을 실행할 때 필요하다. Gradle 9는 이것을 자동으로 넣지 않는다.</li>
+      <li><b>없는 줄</b>: Initializr는 H2를 고르면 <code>spring-boot-h2console</code>도 넣는다. AI가 그 줄을 지웠다. 요청한 적이 없기 때문이다.</li>
+    </ul>
+    <p class="bridge">빌드가 정의됐다. 이제 빌드할 코드가 필요하다.</p>
+  </div>
+
+  <div class="step">
+    <h3>스텝 3 — 뜨는 것 하나와, 뜨는지 확인하는 것 하나</h3>
+    <p class="why">왜: "빈 애플리케이션이 뜬다"를 사람이 눈으로 한 번 확인하면 다음 사람은 모른다. 테스트로 남기면 빌드할 때마다 확인된다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/TrealworldApplication.java</b> — 시작점이다. 컴포넌트 스캔의 뿌리도 여기다.</p>
+<pre class="diff"><span class="add">package trealworld;</span><span class="add"> </span><span class="add">import org.springframework.boot.SpringApplication;</span><span class="add">import org.springframework.boot.autoconfigure.SpringBootApplication;</span><span class="add"> </span><span class="add">@SpringBootApplication</span><span class="add">public class TrealworldApplication {</span><span class="add"> </span><span class="add">    public static void main(String[] args) {</span><span class="add">        SpringApplication.run(TrealworldApplication.class, args);</span><span class="add">    }</span><span class="add"> </span><span class="add">}</span></pre>
+    <p>패키지가 <code>trealworld</code> 한 단어다. ADR-0002의 패키지는 이 아래에 생긴다: <code>trealworld.domain</code>, <code>trealworld.application</code>, <code>trealworld.adapter</code>. 이 클래스는 세 패키지의 밖(뿌리)에 있다. 작업 2의 ArchUnit 규칙은 이 클래스를 어느 쪽에도 넣지 않아야 한다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/TrealworldApplicationTests.java</b> — 전체 컨텍스트가 뜨는지 확인한다.</p>
+<pre class="diff"><span class="add">@SpringBootTest</span><span class="add">class TrealworldApplicationTests {</span><span class="add"> </span><span class="add">    @Test</span><span class="add">    void contextLoads() {</span><span class="add">    }</span><span class="add"> </span><span class="add">}</span></pre>
+    <p>테스트의 본문이 비어 있다. 틀린 것이 아니다. <code>@SpringBootTest</code>가 컨텍스트를 띄우다가 실패하면 테스트가 실패한다. 실제로 이 테스트는 Hibernate와 H2의 연결까지 띄운다.</p>
+    <p class="file-role"><b>src/main/resources/application.properties</b>, <b>settings.gradle.kts</b> — 이름만 있다.</p>
+<pre class="diff"><span class="add">spring.application.name=trealworld</span></pre>
+<pre class="diff"><span class="add">rootProject.name = &quot;trealworld&quot;</span></pre>
+    <p>설정이 1줄이다. DB의 주소도, 포트도 없다. H2가 classpath에 있으면 Spring Boot가 인메모리 DB를 만든다. 실제로 뜬 주소는 <code>jdbc:h2:mem:a02c5c20-…</code>처럼 무작위다.</p>
+    <p class="bridge">코드가 뜬다. 남은 것은 문서의 숙제다.</p>
+  </div>
+
+  <div class="step">
+    <h3>스텝 4 — 확인한 숫자를 ADR에 돌려준다</h3>
+    <p class="why">왜: ADR-0001은 "프로젝트를 만들 때 확인해서 적는다"고 약속했다. 약속한 문장을 결과의 문장으로 바꾼다.</p>
+    <p class="file-role"><b>docs/adr/0001-tech-stack.md</b> — 기술 스택의 결정이다. 사용자가 승인한 문서다.</p>
+<pre class="diff"><span class="skip">@@ -1,6 +1,6 @@</span><span class="ctx"># ADR-0001. 기술 스택</span><span class="ctx"> </span><span class="del">- 상태: 승인 (사용자가 결정, 2026-11-16)</span><span class="add">- 상태: 승인 (사용자가 결정, 2026-11-16). 수정 (2026-11-17): 프로젝트를 만들 때 확인한 버전을 적었다.</span><span class="ctx"> </span><span class="ctx">## 맥락</span><span class="ctx"> </span><span class="skip">@@ -10,9 +10,9 @@</span><span class="ctx"> </span><span class="ctx">| 항목 | 선택 |</span><span class="ctx">|---|---|</span><span class="del">| 프레임워크 | Spring Boot 최신 안정 버전 |</span><span class="add">| 프레임워크 | Spring Boot 4.1.2 (2026-11-17의 최신 안정 버전) |</span><span class="ctx">| 언어 | Java 25 |</span><span class="del">| 빌드 | Gradle Kotlin DSL |</span><span class="add">| 빌드 | Gradle 9.9.1 (wrapper), Kotlin DSL |</span><span class="ctx">| 영속성 | JPA |</span><span class="ctx">| DB | H2 (인메모리) |</span><span class="ctx">| 보조 도구 | Lombok |</span><span class="skip">@@ -21,5 +21,7 @@</span><span class="ctx">## 결과</span><span class="ctx"> </span><span class="ctx">- 대안을 비교하지 않았다. 사용자가 익숙한 스택을 골랐다.</span><span class="del">- Spring Boot의 버전 번호는 프로젝트를 만들 때 확인해서 이 문서에 적는다.</span><span class="add">- Spring Boot의 버전은 Spring Initializr(start.spring.io)의 기본값에서 확인했다. SNAPSHOT과 RC는 뺐다.</span><span class="add">- 기본 패키지는 `trealworld`다.</span><span class="add">- 의존성은 쓰는 작업에서 더한다. Spring Security, 검증, ArchUnit은 아직 없다.</span><span class="ctx">- H2는 인메모리다. 서버를 다시 시작하면 데이터가 사라진다. 시연에는 충분하다.</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li>약속의 줄(−)이 사라지고 결과의 줄(+)이 생겼다. 문서가 "할 일"에서 "한 일"로 바뀌었다.</li>
+      <li>더한 3줄에서 2줄은 <b>AI가 정한 것</b>이다: 기본 패키지, 의존성을 늦게 더하는 방식. 승인된 ADR에 AI의 결정이 들어갔다. 상태 줄에 "수정 (2026-11-17)"을 남겼다. 사용자의 확인이 필요하다.</li>
+    </ul>
+    <p class="bridge">작업 1의 두 검증과 ADR의 숙제가 끝났다. 다음은 작업 2(아키텍처 테스트)다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>4. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>gradlew</code> (+248), <code>gradlew.bat</code> (+112) — Gradle wrapper의 실행 스크립트다. Initializr가 만든 그대로다.</li>
+    <li><code>gradle/wrapper/gradle-wrapper.jar</code> (49,154바이트) — wrapper의 실행 파일이다. 바이너리다. 저장소에 넣는 것이 Gradle의 관례다.</li>
+    <li><code>gradle/wrapper/gradle-wrapper.properties</code>의 나머지 8줄 — 내려받는 위치와 시간 제한이다. 기본값이다.</li>
+    <li><code>.gitignore</code> (+37) — <code>build/</code>, <code>.gradle</code>, IDE의 파일(<code>.idea</code>, <code>.vscode/</code> 등), <code>HELP.md</code>를 뺀다. Initializr의 기본값이다.</li>
+    <li><code>.gitattributes</code> (+3) — <code>gradlew</code>는 LF, <code>*.bat</code>은 CRLF, <code>*.jar</code>는 바이너리로 다룬다.</li>
+    <li><code>src/test/.../TrealworldApplicationTests.java</code>의 앞 5줄 — <code>package</code>와 <code>import</code>다.</li>
+    <li><code>docs/journal/2026-11-17.md</code> (+44) — 스텝 19(작업 1)와 스텝 20(이 커밋)의 기록이다.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>5. 검토 메모</h2>
+  <p>"확인"은 실행해서 본 것이다. "추정"은 파일을 읽고 판단한 것이다.</p>
+  <ul>
+    <li><b>[확인] <code>spring.jpa.open-in-view</code> 경고가 뜬다.</b> 시작할 때의 로그에 <code>WARN … spring.jpa.open-in-view is enabled by default</code>가 있다. 기본값은 "HTTP 요청이 끝날 때까지 영속성 컨텍스트를 연다"다. ADR-0002(헥사고날)와 ADR-0005(응답용 객체)의 방향과 반대다. 웹 어댑터가 지연 로딩을 건드려도 오류가 나지 않아서, 경계를 넘는 실수가 숨는다. → <code>false</code>로 끄는 것을 권장한다. 시점은 지금이거나 JPA를 처음 쓰는 작업 4다.</li>
+    <li><b>[확인] 8080 포트가 이미 쓰이고 있다.</b> 검증할 때 이 컴퓨터의 8080에 다른 Java 프로세스가 있었다. 그래서 18080에서 띄웠다. <b>[추정]</b> 같은 상태에서 <code>./gradlew bootRun</code>을 그대로 실행하면 포트 충돌로 실패한다. 세미나의 시연 전에 확인이 필요하다. 테스트는 영향이 없다 (<code>@SpringBootTest</code>의 기본값은 실제 포트를 열지 않는다).</li>
+    <li><b>[확인] Lombok은 아직 검증되지 않았다.</b> 빌드는 성공했다. 그러나 Lombok 애너테이션을 쓰는 코드가 0줄이다. "Lombok 1.18.48이 Java 25에서 동작한다"는 작업 3(도메인)에서 처음 확인된다.</li>
+    <li><b>[확인] Jackson이 3이다 (3.1.7).</b> 패키지가 <code>com.fasterxml.jackson</code>에서 <code>tools.jackson</code>으로 바뀌었다. 작업 4에서 JSON을 직접 다루는 코드를 쓰면, 기억에 있는 Jackson 2의 import는 컴파일되지 않는다.</li>
+    <li><b>[확인] JUnit이 6이다 (6.0.3).</b> ADR-0001은 "JUnit"이라고만 적었다. 틀리지 않다. 버전을 적을지는 사용자가 정한다.</li>
+    <li><b>[추정] JDK 25가 없는 컴퓨터에서는 빌드가 실패한다.</b> <code>settings.gradle.kts</code>에 toolchain을 자동으로 내려받는 플러그인(foojay resolver)이 없다. 이 컴퓨터에는 Temurin 25.0.4가 있어서 문제가 없다. 발표를 본 사람이 저장소를 받아서 돌릴 때의 문제다.</li>
+    <li><b>[확인] DB를 눈으로 볼 방법이 없다.</b> H2 콘솔을 뺐고, DB의 이름은 무작위다. plan의 작업 4는 "저장된 값이 비밀번호의 원문이 아니다"를 테스트로 검증하므로 필요하지 않다. 시연에서 DB를 보여주려면 콘솔을 다시 넣어야 한다.</li>
+    <li><b>[질문] 패키지 이름 <code>trealworld</code>.</b> 한 단어다. 관례(<code>com.example.…</code>)와 다르다. 배포하지 않으므로 문제는 없다. 바꾸려면 작업 2의 전이 가장 싸다. 작업 2부터 ArchUnit 규칙이 이 이름을 쓴다.</li>
+    <li><b>[질문] <code>contextLoads</code>에는 AC/R의 ID가 없다.</b> ADR-0004는 테스트 이름에 ID를 넣는다. 이 테스트는 어느 수용 기준도 검증하지 않는다. "뼈대의 테스트는 예외"라고 적을지, 작업 7에서 전체 흐름 테스트로 바꿀지 정해야 한다.</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>
