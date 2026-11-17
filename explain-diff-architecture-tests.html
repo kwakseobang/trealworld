@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아키텍처 테스트 설명</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:700}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">explain-diff · plan 01 · 작업 2</p>
+  <h1>아직 없는 코드가 지킬 방향을 테스트로 먼저 세운다</h1>
+  <div class="meta"><span>commit 413abc5</span><span>8 files</span><span>+151 / −2</span></div>
+  <div class="assumption"><b>독자 가정.</b> 헥사고날 아키텍처와 Spring을 잘 아는 독자다. 그 설명은 뺐다. ArchUnit의 동작 방식과, 규칙 5개가 실제로 무엇을 잡고 무엇을 놓치는지에 집중했다. 놓치는 것은 임시 클래스를 넣고 실행해서 확인했다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>이 커밋의 앞</h3>
+  <p>코드는 <code>TrealworldApplication</code> 하나였다 (작업 1). ADR-0002는 패키지 3개와 규칙 5개를 <b>문장으로</b> 정했다. 문장은 아무도 강제하지 않는다. plan의 작업 2는 그 문장을 테스트로 바꾼다. 검증은 두 가지다.</p>
+  <table>
+    <tr><th>plan의 요구</th><th>뜻</th></tr>
+    <tr><td>규칙 1~5가 테스트로 있다</td><td>규칙 하나를 테스트 하나로 찾을 수 있다</td></tr>
+    <tr><td>규칙을 일부러 어기면 테스트가 실패한다</td><td>테스트가 정말로 잡는다</td></tr>
+  </table>
+
+  <h3>ADR-0002의 규칙 5개</h3>
+  <ol>
+    <li><code>domain</code>은 <code>application</code>과 <code>adapter</code>에 의존하지 않는다.</li>
+    <li><code>application</code>은 <code>adapter</code>에 의존하지 않는다.</li>
+    <li><code>domain</code>은 Spring에 의존하지 않는다.</li>
+    <li><code>adapter</code>끼리는 서로 의존하지 않는다.</li>
+    <li>웹 어댑터는 들어오는 포트를 통해서만 <code>application</code>을 쓴다.</li>
+  </ol>
+
+  <details>
+    <summary>ArchUnit은 어떻게 동작하는가</summary>
+    <p>ArchUnit은 소스가 아니고 <b>컴파일된 클래스 파일</b>을 읽는다. 클래스마다 "누구를 참조하는가"를 모은다: 필드의 타입, 메서드의 인자, 애너테이션, 상속. 규칙은 "이 패키지의 클래스는 저 패키지의 클래스를 참조하지 않는다" 같은 문장이다. <code>check()</code>가 규칙을 어긴 참조를 모두 찾아서 <code>AssertionError</code>로 던진다. 보통의 JUnit 테스트 안에서 돈다. Spring은 뜨지 않는다.</p>
+  </details>
+
+  <p>문제가 두 개 있다. 첫째, 규칙이 지킬 코드가 아직 없다. 둘째, ADR의 규칙은 "웹 어댑터", "들어오는 포트"라고 말한다. 테스트는 패키지의 이름이 필요하다.</p>
+</section>
+
+<section id="idea">
+  <h2>2. 핵심 아이디어</h2>
+  <p class="intuition">벽을 먼저 세우고, 그 뒤에 방을 채운다. 벽이 정말 막는지는 일부러 부딪쳐서 확인한다.</p>
+  <p>코드가 없을 때 규칙을 세우면, 뒤에 생기는 모든 코드는 처음부터 규칙 안에서 태어난다. 그러나 지킬 코드가 없는 규칙은 항상 통과한다. 통과가 "규칙이 옳다"인지 "검사한 것이 없다"인지 알 수 없다. 그래서 규칙마다 위반하는 클래스를 임시로 넣었다. 5개가 각각 실패하는 것을 보고, 지웠다. 이 실험은 커밋에 없다. 일지에만 있다.</p>
+  <figure>
+    <svg viewBox="0 0 720 250" role="img" aria-label="패키지 세 개와 허용된 의존 방향">
+      <style>
+        .b{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+        .p{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+        .t{font:700 15px var(--mono);fill:var(--fg)}
+        .s{font:13px var(--sans);fill:var(--muted)}
+        .ok{stroke:var(--accent);stroke-width:2;fill:none}
+        .no{stroke:var(--warn);stroke-width:2;fill:none;stroke-dasharray:6 4}
+        .l{font:600 12px var(--sans);fill:var(--warn)}
+        .lo{font:600 12px var(--sans);fill:var(--accent)}
+      </style>
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--warn)"/></marker>
+      </defs>
+      <rect x="20" y="80" width="190" height="90" rx="10" class="b"/><text x="36" y="108" class="t">adapter</text><text x="36" y="130" class="s">web · persistence ·</text><text x="36" y="148" class="s">security</text>
+      <rect x="265" y="80" width="190" height="90" rx="10" class="b"/><text x="281" y="108" class="t">application</text><text x="281" y="130" class="s">유스케이스, 포트</text>
+      <rect x="510" y="80" width="190" height="90" rx="10" class="p"/><text x="526" y="108" class="t">domain</text><text x="526" y="130" class="s">회원, 값 객체, 규칙</text>
+      <path d="M210 110 H262" class="ok" marker-end="url(#a1)"/>
+      <path d="M455 110 H507" class="ok" marker-end="url(#a1)"/>
+      <path d="M115 80 C115 20 605 20 605 77" class="ok" marker-end="url(#a1)"/>
+      <text x="330" y="28" class="lo">허용: 안쪽으로만</text>
+      <path d="M510 145 H458" class="no" marker-end="url(#a2)"/><text x="463" y="163" class="l">규칙 1</text>
+      <path d="M265 145 H213" class="no" marker-end="url(#a2)"/><text x="218" y="163" class="l">규칙 2</text>
+      <path d="M605 170 C605 235 115 235 115 173" class="no" marker-end="url(#a2)"/><text x="335" y="232" class="l">규칙 1</text>
+      <path d="M60 170 C40 215 150 215 130 173" class="no" marker-end="url(#a2)"/><text x="20" y="205" class="l">규칙 4</text>
+    </svg>
+    <figcaption>실선은 허용된 의존이다. 점선은 테스트가 막는 의존이다. 규칙 3(Spring)과 규칙 5(웹 → 포트)는 아래의 표에 있다.</figcaption>
+  </figure>
+
+  <h3>누가 누구에게 의존할 수 있는가</h3>
+  <p>모든 칸은 임시 클래스를 넣고 테스트를 실행해서 확인했다.</p>
+  <table>
+    <tr><th>참조하는 쪽 ↓ / 참조되는 쪽 →</th><th>결과</th></tr>
+    <tr><td><code>domain</code> → <code>application</code></td><td class="warn">규칙 1이 막는다</td></tr>
+    <tr><td><code>domain</code> → Spring (<code>@Component</code>)</td><td class="warn">규칙 3이 막는다</td></tr>
+    <tr><td><code>domain</code> → JPA (<code>@Entity</code>)</td><td>통과</td></tr>
+    <tr><td><code>application</code> → <code>adapter.persistence</code></td><td class="warn">규칙 2가 막는다</td></tr>
+    <tr><td><code>application</code> → Spring (<code>@Service</code>)</td><td>통과</td></tr>
+    <tr><td><code>adapter.web</code> → <code>adapter.persistence</code></td><td class="warn">규칙 4가 막는다</td></tr>
+    <tr><td><code>adapter.web</code> → <code>application.port.in</code></td><td>통과</td></tr>
+    <tr><td><code>adapter.web</code> → <code>application</code>의 다른 클래스</td><td class="warn">규칙 5가 막는다</td></tr>
+    <tr><td><code>adapter.web</code> → <code>application.port.out</code></td><td class="warn">규칙 5가 막는다</td></tr>
+    <tr><td><code>adapter.web</code> → <code>domain</code></td><td>통과</td></tr>
+    <tr><td><code>adapter.persistence</code> → <code>application</code>의 아무 클래스</td><td>통과</td></tr>
+  </table>
+</section>
+
+<section id="walkthrough">
+  <h2>3. 변경을 순서대로 읽기</h2>
+
+  <div class="step" id="step1">
+    <h3>스텝 1 — 도구를 들인다</h3>
+    <p class="why">왜: 작업 1의 원칙은 "쓰는 작업에서 더한다"였다. ArchUnit을 처음 쓰는 작업이 지금이다.</p>
+    <p class="file-role"><b>build.gradle.kts</b> — 빌드의 정의다.</p>
+<pre class="diff"><span class="skip">@@ -25,6 +25,7 @@ dependencies {</span><span class="ctx">    annotationProcessor(&quot;org.projectlombok:lombok&quot;)</span><span class="ctx">    testImplementation(&quot;org.springframework.boot:spring-boot-starter-data-jpa-test&quot;)</span><span class="ctx">    testImplementation(&quot;org.springframework.boot:spring-boot-starter-webmvc-test&quot;)</span><span class="add">    testImplementation(&quot;com.tngtech.archunit:archunit:1.5.1&quot;)</span><span class="ctx">    testCompileOnly(&quot;org.projectlombok:lombok&quot;)</span><span class="ctx">    testRuntimeOnly(&quot;org.junit.platform:junit-platform-launcher&quot;)</span><span class="ctx">    testAnnotationProcessor(&quot;org.projectlombok:lombok&quot;)</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li>버전 번호(<code>1.5.1</code>)가 있다. 다른 의존성에는 없다. ArchUnit은 Spring Boot가 버전을 관리하지 않는다. 그래서 사람이 고정한다.</li>
+      <li><code>archunit-junit5</code>가 아니고 <code>archunit</code>이다. JUnit 연동 모듈을 쓰지 않는다. 이 프로젝트의 JUnit은 6이다. 본체만 쓰면 연동 모듈이 JUnit 6에서 도는지 확인할 필요가 없다. 값: <code>@ArchTest</code> 대신 보통의 <code>@Test</code>를 쓴다.</li>
+    </ul>
+    <p class="file-role"><b>docs/adr/0001-tech-stack.md</b> — 기술 스택의 결정이다.</p>
+<pre class="diff"><span class="skip">@@ -23,5 +23,5 @@</span><span class="ctx">- 대안을 비교하지 않았다. 사용자가 익숙한 스택을 골랐다.</span><span class="ctx">- Spring Boot의 버전은 Spring Initializr(start.spring.io)의 기본값에서 확인했다. SNAPSHOT과 RC는 뺐다.</span><span class="ctx">- 기본 패키지는 `trealworld`다.</span><span class="del">- 의존성은 쓰는 작업에서 더한다. Spring Security, 검증, ArchUnit은 아직 없다.</span><span class="add">- 의존성은 쓰는 작업에서 더한다. ArchUnit 1.5.1은 작업 2에서 더했다. Spring Security와 검증은 아직 없다.</span><span class="ctx">- H2는 인메모리다. 서버를 다시 시작하면 데이터가 사라진다. 시연에는 충분하다.</span></pre>
+    <p class="bridge">도구가 생겼다. 규칙을 쓰려면 "어디가 domain인가"의 이름이 먼저 필요하다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>스텝 2 — 지킬 곳에 이름을 붙인다</h3>
+    <p class="why">왜: 규칙은 패키지의 이름으로 말한다. 이름이 문서와 코드에서 다르면 규칙은 아무것도 지키지 않는다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/domain/package-info.java</b> — 패키지를 만든다. 패키지의 계약을 그 자리에 적는다. <code>application</code>, <code>adapter</code>에도 같은 모양의 파일이 있다.</p>
+<pre class="diff"><span class="add">/**</span><span class="add"> * 회원, 값 객체, 도메인 규칙.</span><span class="add"> * 의존해도 되는 것: Java, JPA 애너테이션, Lombok. (ADR-0002)</span><span class="add"> */</span><span class="add">package trealworld.domain;</span></pre>
+<pre class="diff"><span class="add">/**</span><span class="add"> * 유스케이스와 포트(들어오는 것, 나가는 것).</span><span class="add"> * 의존해도 되는 것: domain. (ADR-0002)</span><span class="add"> */</span><span class="add">package trealworld.application;</span></pre>
+<pre class="diff"><span class="add">/**</span><span class="add"> * 웹, 영속성, 보안.</span><span class="add"> * 의존해도 되는 것: application, domain. adapter끼리는 의존하지 않는다. (ADR-0002)</span><span class="add"> */</span><span class="add">package trealworld.adapter;</span></pre>
+    <p>Java에는 빈 패키지가 없다. 파일이 하나는 있어야 디렉터리가 git에 남는다. <code>package-info.java</code>는 애너테이션이 없으면 클래스 파일을 만들지 않는다. 그래서 ArchUnit이 보는 클래스는 여전히 0개다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/ArchitectureTests.java</b> — 규칙 5개가 사는 곳이다. 먼저 이름 5개다.</p>
+<pre class="diff"><span class="add">    private static final String DOMAIN = &quot;trealworld.domain..&quot;;</span><span class="add">    private static final String APPLICATION = &quot;trealworld.application..&quot;;</span><span class="add">    private static final String INCOMING_PORT = &quot;trealworld.application.port.in..&quot;;</span><span class="add">    private static final String ADAPTER = &quot;trealworld.adapter..&quot;;</span><span class="add">    private static final String WEB_ADAPTER = &quot;trealworld.adapter.web..&quot;;</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li>끝의 <code>..</code>은 "이 패키지와 그 아래 모두"다. <code>trealworld.domain..</code>은 <code>trealworld.domain.member</code>도 포함한다.</li>
+      <li><code>INCOMING_PORT</code>와 <code>WEB_ADAPTER</code>는 <b>아직 없는 패키지</b>다. ADR-0002는 "들어오는 포트", "웹 어댑터"라고만 썼다. AI가 이름을 정했다: <code>application.port.in</code>, <code>adapter.web</code>.</li>
+    </ul>
+    <p class="file-role"><b>docs/adr/0002-hexagonal-architecture.md</b> — 정한 이름을 승인된 문서에 돌려준다.</p>
+<pre class="diff"><span class="skip">@@ -1,6 +1,6 @@</span><span class="ctx"># ADR-0002. 헥사고날 아키텍처와 ArchUnit 규칙</span><span class="ctx"> </span><span class="del">- 상태: 승인 (2026-11-16). 스타일은 사용자가 결정했다. 세부 규칙은 AI가 제안하고 사용자가 승인했다. 수정 (2026-11-17): 포트의 위치를 적었다.</span><span class="add">- 상태: 승인 (2026-11-16). 스타일은 사용자가 결정했다. 세부 규칙은 AI가 제안하고 사용자가 승인했다. 수정 (2026-11-17): 포트의 위치를 적었다. 수정 (2026-11-17, 작업 2): 규칙이 쓰는 패키지의 이름을 적었다.</span><span class="ctx"> </span><span class="ctx">## 맥락</span><span class="ctx"> </span><span class="skip">@@ -26,6 +26,16 @@ ArchUnit으로 강제하는 규칙:</span><span class="ctx"> </span><span class="ctx">포트는 모두 `application`에 둔다. `domain`에는 인터페이스를 두지 않는다.</span><span class="ctx"> </span><span class="add">규칙이 쓰는 패키지의 이름 (기본 패키지는 `trealworld`):</span><span class="add"> </span><span class="add">| 규칙의 말 | 패키지 |</span><span class="add">|---|---|</span><span class="add">| 들어오는 포트 | `application.port.in` |</span><span class="add">| 웹 어댑터 | `adapter.web` |</span><span class="add">| adapter 하나 | `adapter`의 바로 아래 패키지 하나 (`adapter.web`, `adapter.persistence`, `adapter.security`) |</span><span class="add"> </span><span class="add">규칙은 `ArchitectureTests`에 있다. 테스트의 이름에 규칙의 번호가 있다.</span><span class="add"> </span><span class="ctx">도메인 엔티티에 JPA 애너테이션을 직접 붙인다. 영속성용 클래스를 따로 두지 않는다.</span><span class="ctx"> </span><span class="ctx">## 결과</span></pre>
+    <p class="bridge">이름이 생겼다. 다음은 검사할 클래스를 모으는 일이다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>스텝 3 — 클래스 파일을 한 번 읽어 들인다</h3>
+    <p class="why">왜: 규칙 5개가 같은 클래스 집합을 본다. 한 번 읽고 함께 쓴다.</p>
+    <p class="file-role"><b>ArchitectureTests.java</b> (이어서)</p>
+<pre class="diff"><span class="add">    private static final JavaClasses classes = new ClassFileImporter()</span><span class="add">            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)</span><span class="add">            .importPackages(&quot;trealworld&quot;);</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li><code>DO_NOT_INCLUDE_TESTS</code> — 테스트 코드는 검사하지 않는다. 테스트는 모든 계층을 건드려도 된다. 이 선택 때문에 위반 실험의 임시 클래스를 <code>src/main</code>에 넣어야 했다.</li>
+      <li><code>static final</code> — 클래스를 읽는 일은 테스트 클래스마다 한 번이다.</li>
+    </ul>
+    <p class="bridge">재료가 준비됐다. 이제 규칙이다. 먼저 모양이 같은 3개다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>스텝 4 — 안쪽은 바깥쪽을 모른다 (규칙 1, 2, 3)</h3>
+    <p class="why">왜: 세 규칙은 같은 문장이다. "A의 클래스는 B의 클래스에 의존하지 않는다." A와 B만 다르다.</p>
+<pre class="diff"><span class="add">    @Test</span><span class="add">    void rule1_domain_does_not_depend_on_application_or_adapter() {</span><span class="add">        noClasses().that().resideInAPackage(DOMAIN)</span><span class="add">                .should().dependOnClassesThat().resideInAnyPackage(APPLICATION, ADAPTER)</span><span class="add">                .as(&quot;ADR-0002 규칙 1: domain은 application과 adapter에 의존하지 않는다&quot;)</span><span class="add">                .allowEmptyShould(true)</span><span class="add">                .check(classes);</span><span class="add">    }</span><span class="add"> </span><span class="add">    @Test</span><span class="add">    void rule2_application_does_not_depend_on_adapter() {</span><span class="add">        noClasses().that().resideInAPackage(APPLICATION)</span><span class="add">                .should().dependOnClassesThat().resideInAPackage(ADAPTER)</span><span class="add">                .as(&quot;ADR-0002 규칙 2: application은 adapter에 의존하지 않는다&quot;)</span><span class="add">                .allowEmptyShould(true)</span><span class="add">                .check(classes);</span><span class="add">    }</span><span class="add"> </span><span class="add">    @Test</span><span class="add">    void rule3_domain_does_not_depend_on_spring() {</span><span class="add">        noClasses().that().resideInAPackage(DOMAIN)</span><span class="add">                .should().dependOnClassesThat().resideInAPackage(&quot;org.springframework..&quot;)</span><span class="add">                .as(&quot;ADR-0002 규칙 3: domain은 Spring에 의존하지 않는다&quot;)</span><span class="add">                .allowEmptyShould(true)</span><span class="add">                .check(classes);</span><span class="add">    }</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li>테스트의 이름이 <code>rule1_</code>, <code>rule2_</code>, <code>rule3_</code>으로 시작한다. ADR-0004는 "이름에 ID를 넣는다"고 정했다. ADR-0002의 규칙 번호가 ID다.</li>
+      <li><code>.as("ADR-0002 규칙 1: …")</code> — 실패했을 때의 메시지다. 실패한 사람은 메시지에서 문서의 위치를 바로 안다.</li>
+      <li>규칙 3은 규칙 1과 다른 것을 지킨다. 규칙 1은 <b>우리 코드</b>의 안쪽 방향이다. 규칙 3은 <b>프레임워크</b>다. 도메인에 <code>@Component</code> 하나가 붙으면 도메인 테스트에 Spring이 필요해진다.</li>
+      <li><code>.allowEmptyShould(true)</code> — ArchUnit은 "검사한 클래스가 0개"이면 기본으로 실패한다. 지금은 패키지가 비어 있어서 이 줄로 풀었다. <b>임시다.</b> 검토 메모 1을 본다.</li>
+    </ul>
+    <p class="bridge">큰 방향 3개가 막혔다. 남은 2개는 <code>adapter</code>의 안쪽을 본다. 문장의 모양이 다르다.</p>
+  </div>
+
+  <div class="step" id="step5">
+    <h3>스텝 5 — 어댑터는 서로 모르고, 웹은 포트만 안다 (규칙 4, 5)</h3>
+    <p class="why">왜: 규칙 1~3은 패키지 3개의 사이를 본다. 규칙 4와 5는 패키지 하나의 안과, 경계의 좁은 문을 본다.</p>
+<pre class="diff"><span class="add">    @Test</span><span class="add">    void rule4_adapters_do_not_depend_on_each_other() {</span><span class="add">        slices().matching(&quot;trealworld.adapter.(*)..&quot;)</span><span class="add">                .should().notDependOnEachOther()</span><span class="add">                .as(&quot;ADR-0002 규칙 4: adapter끼리는 서로 의존하지 않는다&quot;)</span><span class="add">                .allowEmptyShould(true)</span><span class="add">                .check(classes);</span><span class="add">    }</span><span class="add"> </span><span class="add">    @Test</span><span class="add">    void rule5_web_adapter_uses_application_only_through_incoming_ports() {</span><span class="add">        noClasses().that().resideInAPackage(WEB_ADAPTER)</span><span class="add">                .should().dependOnClassesThat(resideInAPackage(APPLICATION).and(not(resideInAPackage(INCOMING_PORT))))</span><span class="add">                .as(&quot;ADR-0002 규칙 5: 웹 어댑터는 들어오는 포트를 통해서만 application을 쓴다&quot;)</span><span class="add">                .allowEmptyShould(true)</span><span class="add">                .check(classes);</span><span class="add">    }</span></pre>
+    <p>볼 곳:</p>
+    <ul>
+      <li>규칙 4의 <code>(*)</code> — <code>adapter</code>의 바로 아래 패키지 하나가 "조각" 하나다. <code>adapter.web</code>, <code>adapter.persistence</code>, <code>adapter.security</code>가 각각 조각이다. 조각의 이름을 적지 않았다. 새 어댑터가 생기면 자동으로 조각이 된다.</li>
+      <li>규칙 5의 조건은 "<code>application</code>에 있고, <b>그리고</b> <code>application.port.in</code>에 있지 않은 클래스"다. 웹 어댑터에게 <code>application</code>은 문 하나(<code>port.in</code>)만 열려 있다. 나가는 포트(<code>port.out</code>)도 막힌다.</li>
+      <li>규칙 5는 <code>domain</code>을 막지 않는다. 웹 어댑터는 도메인 타입을 쓸 수 있다.</li>
+    </ul>
+    <p class="bridge">규칙 5개가 모두 테스트가 됐다. 지킬 코드는 작업 3(도메인)부터 생긴다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>4. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>ArchitectureTests.java</code>의 1~16행, 73행 — <code>package</code>, <code>import</code> 8줄, 클래스의 설명("ADR-0002의 규칙 1~5"), 닫는 괄호다.</li>
+    <li><code>docs/journal/2026-11-17.md</code> (+50) — 스텝 25(작업 2)와 스텝 26(이 커밋)의 기록이다. 위반 실험의 표가 여기에 있다.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>5. 검토 메모</h2>
+  <p>"확인"은 임시 클래스를 넣고 테스트를 실행해서 본 것이다. "추정"은 코드를 읽고 판단한 것이다.</p>
+  <ul>
+    <li><b>[확인] 1. 지금의 초록은 오타도 통과시킨다.</b> 검사할 클래스가 0개인데 5개가 통과한다. <code>allowEmptyShould(true)</code> 때문이다. 이 줄이 남아 있으면, 누가 <code>"trealworld.domian.."</code>으로 잘못 써도 규칙은 조용히 통과한다. → 규칙 1, 3은 작업 3에서, 규칙 2, 4, 5는 작업 4에서 이 줄을 지워야 한다. 일지의 "남은 일"에만 적혀 있다. plan에는 없다.</li>
+    <li><b>[확인] 2. <code>adapter</code>의 바로 아래에 둔 클래스는 규칙 4가 보지 않는다.</b> <code>trealworld.adapter.Direct</code>가 <code>adapter.web</code>과 <code>adapter.persistence</code>를 둘 다 참조해도 통과했다. <code>(*)</code>는 하위 패키지가 있어야 맞는다. → "<code>adapter</code>의 바로 아래에는 클래스를 두지 않는다"는 규칙이 없다.</li>
+    <li><b>[확인] 3. 영속성 어댑터와 보안 어댑터는 <code>application</code>의 아무 클래스나 쓸 수 있다.</b> <code>adapter.persistence.P</code>가 <code>application.Svc</code>(포트가 아닌 클래스)를 참조해도 통과했다. 규칙 5는 웹만 본다. ADR-0002의 문장이 그렇다. 테스트는 문장을 그대로 옮겼다. 문장을 넓힐지는 사용자가 정한다.</li>
+    <li><b>[확인] 4. <code>application</code>은 Spring을 쓸 수 있다.</b> <code>@Service</code>를 붙여도 통과했다. ADR-0002의 표는 "<code>application</code>이 의존해도 되는 것: <code>domain</code>"이라고 쓴다. 표와 규칙이 다르다. 유스케이스에 <code>@Service</code>와 <code>@Transactional</code>을 쓸지는 작업 4에서 부딪친다.</li>
+    <li><b>[확인] 5. <code>domain</code>의 JPA는 통과한다. [추정] 다른 라이브러리도 통과한다.</b> ADR의 표는 "Java, JPA 애너테이션, Lombok만"이다. 규칙 3은 Spring만 막는다. 도메인이 Hibernate나 Jackson의 클래스를 직접 써도 테스트는 잡지 못한다.</li>
+    <li><b>[추정] 6. 규칙 4는 작업 6의 설계를 미리 정한다.</b> AC-3.5는 "토큰이 유효해도 회원이 없으면 거부한다"다. 보안 어댑터가 회원의 존재를 확인해야 한다. 규칙 4 때문에 보안 어댑터는 영속성 어댑터를 직접 쓸 수 없다. <code>application</code>의 포트를 거쳐야 한다.</li>
+    <li><b>[확인] 7. 위반 실험의 증거는 저장소에 없다.</b> 임시 클래스는 지웠다. "5개가 각각 실패했다"는 일지의 표로만 남았다. 다시 확인하려면 실험을 다시 해야 한다. 작업 3부터는 실제 코드가 규칙의 대상이 되므로 받아들일 수 있다.</li>
+    <li><b>[질문] 8. AI가 정한 이름이 승인된 ADR에 들어갔다.</b> <code>application.port.in</code>, <code>adapter.web</code>이다. ADR-0002의 상태 줄에 "수정 (작업 2)"을 남겼다. 바꾸려면 지금이 가장 싸다. 이 이름을 쓰는 코드가 아직 테스트뿐이다.</li>
+  </ul>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 검토를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>6. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 권장하는 규칙: 통과하기 전에는 이 변경의 검토를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="c">
+      <p class="q-text">테스트 5개를 쓰고 처음 돌렸을 때 5개가 모두 통과했다. 이 통과는 무엇을 증명하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">패키지 3개의 의존 방향이 ADR-0002와 같다</button>
+        <button type="button" data-opt="b">규칙 5개의 문장이 ArchUnit의 문법에 맞고, 위반을 잡을 수 있다</button>
+        <button type="button" data-opt="c">아무것도 증명하지 않는다. 검사한 클래스가 0개다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>패키지에는 <code>package-info.java</code>만 있고, 이 파일은 클래스 파일을 만들지 않는다. 규칙은 검사할 것이 없어서 통과했다. 문법이 맞는다는 것은 컴파일이 증명한다. "위반을 잡는다"는 위반을 넣어야 증명된다. 그래서 plan이 "일부러 어긴다"를 검증으로 요구한다.</p>
+        <a href="#idea">다시 읽기: 핵심 아이디어</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">작업 6에서 <code>adapter.security</code>의 필터가 <code>adapter.persistence</code>의 리포지토리 구현을 직접 주입받는다. 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">규칙 4가 실패한다. 서로 다른 조각의 의존이다</button>
+        <button type="button" data-opt="b">규칙 5가 실패한다. 포트를 거치지 않았다</button>
+        <button type="button" data-opt="c">통과한다. 둘 다 <code>adapter</code> 안에 있다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>규칙 4는 <code>adapter</code>의 바로 아래 패키지 하나를 조각 하나로 본다. <code>security</code>와 <code>persistence</code>는 다른 조각이다. 규칙 5는 웹 어댑터와 <code>application</code>의 사이만 보므로 이 경우와 관계가 없다. 보안 어댑터는 <code>application</code>의 포트를 거쳐야 한다.</p>
+        <a href="#step5">다시 읽기: 스텝 5</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text"><code>adapter.persistence</code>의 클래스가 <code>application</code>에 있는 유스케이스의 구현 클래스(포트가 아니다)를 참조한다. 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">규칙 2가 실패한다. <code>application</code>과 <code>adapter</code>의 사이의 의존이다</button>
+        <button type="button" data-opt="b">통과한다. 이 방향을 막는 규칙이 없다</button>
+        <button type="button" data-opt="c">규칙 5가 실패한다. 포트가 아닌 클래스를 썼다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>규칙 2는 방향이 반대다 (<code>application</code> → <code>adapter</code>를 막는다). 규칙 5는 "웹 어댑터"만 본다. 영속성 어댑터에는 "포트만 쓴다"는 규칙이 없다. 테스트는 ADR-0002의 문장을 그대로 옮겼고, 그 문장이 웹만 말한다.</p>
+        <a href="#review">다시 읽기: 검토 메모 3</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">규칙 5를 "웹 어댑터는 <code>application</code>에 의존하지 않는다"로 <b>잘못</b> 썼다고 하자. 위반 실험에서 위반 클래스(<code>V5</code>: 웹 → 포트가 아닌 클래스)만 넣었다면 실험의 결과는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">규칙 5가 통과한다. 그래서 잘못을 발견한다</button>
+        <button type="button" data-opt="b">규칙 5가 실패한다. 옳은 규칙과 결과가 같아서 잘못을 발견하지 못한다</button>
+        <button type="button" data-opt="c">컴파일이 실패한다. 그래서 잘못을 발견한다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>잘못 쓴 규칙도 <code>V5</code>를 잡는다. 위반 실험은 "잡아야 할 것을 잡는가"만 본다. 잘못 쓴 규칙의 문제는 "잡지 말아야 할 것(웹 → 들어오는 포트)도 잡는다"다. 그것은 허용된 의존을 넣어야 보인다. 그래서 실험에 대조군(<code>TmpOk</code>)이 있었다.</p>
+        <a href="#idea">다시 읽기: 의존의 표</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">작업 3에서 <code>domain</code>에 클래스가 생겼다. <code>allowEmptyShould(true)</code>는 지우지 않았다. 그 뒤에 누가 상수를 <code>"trealworld.domian.."</code>으로 잘못 고쳤다. 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">컴파일이 실패한다. 없는 패키지를 가리키기 때문이다</button>
+        <button type="button" data-opt="b">규칙 1과 3이 실패한다. ArchUnit은 검사한 클래스가 없으면 실패한다</button>
+        <button type="button" data-opt="c">규칙 1과 3이 통과한다. 도메인은 그때부터 지켜지지 않는다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>패키지의 이름은 문자열이다. 컴파일러는 보지 않는다. ArchUnit의 기본 동작은 b가 맞다. 그러나 <code>allowEmptyShould(true)</code>가 그 안전장치를 껐다. 그래서 이 줄은 임시이고, 패키지에 클래스가 생기는 작업에서 지워야 한다.</p>
+        <a href="#review">다시 읽기: 검토 메모 1</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
