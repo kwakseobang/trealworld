@@ -3,9 +3,12 @@ package trealworld.domain;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import jakarta.persistence.Embeddable;
+
 /**
  * 이메일. 올바른 형식이고, 소문자로 저장한다. (R2)
  */
+@Embeddable
 public record Email(String value) {
 
 	private static final Pattern FORMAT = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");

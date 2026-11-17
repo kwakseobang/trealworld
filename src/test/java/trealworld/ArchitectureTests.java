@@ -38,7 +38,6 @@ class ArchitectureTests {
 		noClasses().that().resideInAPackage(APPLICATION)
 				.should().dependOnClassesThat().resideInAPackage(ADAPTER)
 				.as("ADR-0002 규칙 2: application은 adapter에 의존하지 않는다")
-				.allowEmptyShould(true)
 				.check(classes);
 	}
 
@@ -55,7 +54,6 @@ class ArchitectureTests {
 		slices().matching("trealworld.adapter.(*)..")
 				.should().notDependOnEachOther()
 				.as("ADR-0002 규칙 4: adapter끼리는 서로 의존하지 않는다")
-				.allowEmptyShould(true)
 				.check(classes);
 	}
 
@@ -64,7 +62,6 @@ class ArchitectureTests {
 		noClasses().that().resideInAPackage(WEB_ADAPTER)
 				.should().dependOnClassesThat(resideInAPackage(APPLICATION).and(not(resideInAPackage(INCOMING_PORT))))
 				.as("ADR-0002 규칙 5: 웹 어댑터는 들어오는 포트를 통해서만 application을 쓴다")
-				.allowEmptyShould(true)
 				.check(classes);
 	}
 

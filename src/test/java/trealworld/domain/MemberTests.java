@@ -42,14 +42,14 @@ class MemberTests {
 	}
 
 	/**
-	 * 회원에는 글자를 그대로 담는 필드가 없다. 비밀번호의 원문을 둘 자리가 없다.
+	 * 회원에는 글자를 그대로 담는 필드가 없다. 비밀번호(Password)의 필드도 없다. 원문을 둘 자리가 없다.
 	 */
 	@Test
 	void r5_member_has_no_field_that_can_hold_a_raw_password() {
 		assertThat(Arrays.stream(Member.class.getDeclaredFields()).map(Field::getType))
 				.isNotEmpty()
 				.noneMatch(type -> CharSequence.class.isAssignableFrom(type) || type == char[].class
-						|| type == byte[].class);
+						|| type == byte[].class || type == Password.class);
 	}
 
 	@Test

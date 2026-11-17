@@ -1,8 +1,11 @@
 package trealworld.domain;
 
+import jakarta.persistence.Embeddable;
+
 /**
  * 사용자 이름. 비어 있지 않고, 앞뒤 공백이 없다. (R3)
  */
+@Embeddable
 public record Username(String value) {
 
 	public Username {

@@ -1,17 +1,41 @@
 package trealworld.domain;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * 회원. 사용자 이름, 이메일, 비밀번호 해시가 항상 있다. (R1)
  * 비밀번호의 원문은 가지지 않는다. (R5)
  */
+@Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member {
 
-	private final Username username;
-	private final Email email;
-	private final PasswordHash passwordHash;
+	/** 회원의 식별자. 저장할 때 생긴다. */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@Embedded
+	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true))
+	private Username username;
+
+	@Embedded
+	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true))
+	private Email email;
+
+	@Embedded
+	@AttributeOverride(name = "value", column = @Column(name = "password_hash", nullable = false))
+	private PasswordHash passwordHash;
 
 	private Member(Username username, Email email, PasswordHash passwordHash) {
 		this.username = required(username, "회원에게 사용자 이름이 없다");
