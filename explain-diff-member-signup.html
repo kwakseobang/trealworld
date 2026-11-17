@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가입: 세 층을 지나는 요청</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+
+/* 이 문서에서 더한 것: 표, 그림, 위젯. 색은 위의 토큰만 쓴다. */
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+table.t th,table.t td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg);font-weight:600}
+table.readout{font:13px/1.6 var(--mono)} table.readout th{white-space:nowrap;width:1%}
+.readout td.yes{color:var(--add-fg)} .readout td.no{color:var(--warn);font-weight:700} .readout td.skip{color:var(--muted);font-style:italic}
+.readout td{word-break:break-all}
+.d-band{fill:none;stroke:var(--line);stroke-dasharray:5 4} .d-core{fill:var(--card);stroke:var(--muted);stroke-dasharray:none}
+.d-box{fill:var(--card);stroke:var(--line)} .d-gate{fill:var(--accent-soft);stroke:var(--accent)}
+.d-member{fill:var(--code-bg);stroke:var(--fg);stroke-width:1.5}
+.d-txt{fill:var(--fg);font:11px var(--mono)} .d-sub{fill:var(--muted);font:11px var(--sans)}
+.d-lbl{fill:var(--muted);font:700 12px var(--sans)}
+.d-arrow{stroke:var(--fg);stroke-width:1.5} .d-impl{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:4 3}
+.d-head{fill:var(--fg)} .d-headi{fill:var(--accent)}
+.file-role b,figcaption code{overflow-wrap:anywhere;word-break:break-all}
+.w-grid{display:grid;gap:8px}
+.w-grid label{font:600 13px var(--mono);display:grid;grid-template-columns:5.5em 1fr;gap:8px;align-items:center}
+.w-grid input{min-width:0;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.w-samples,.w-actions{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.w-samples button{font:12px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+.w-samples button:hover{border-color:var(--accent)}
+.w-actions button{font:600 13px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.w-cap{font:600 13px var(--sans);color:var(--muted);margin:14px 0 4px}
+.w-pre{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0;white-space:pre-wrap;word-break:break-all}
+.w-members{font:13px/1.6 var(--mono);margin:0;padding-left:1.2em}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">plan 01 · 작업 4 · 가입</p>
+  <h1>가입 요청 하나가 세 층을 지난다</h1>
+  <div class="meta"><span>commit ea4c75e</span><span>31 files</span><span>+986 / −16</span></div>
+  <div class="assumption">독자: Java, Spring, 헥사고날 아키텍처를 잘 아는 사람. 이 프로젝트의 spec, Domain 01, ADR은 이미 읽었다. 큰 커밋이다. 테스트는 대표만 보여 주고, 생략한 것은 개수를 적었다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>지금 어디인가</h3>
+  <p>plan 01의 작업 4다. Spec 01의 목표 1(가입)을 만든다. 처음으로 HTTP 요청이 DB까지 간다.</p>
+  <table class="t">
+    <tr><th>만들 것</th><th>출처</th></tr>
+    <tr><td>AC-1.1 ~ AC-1.8 (수용 기준 8개)</td><td>Spec 01</td></tr>
+    <tr><td>R4 (비밀번호의 길이), R6 (이메일은 회원마다 다르다), R7 (사용자 이름은 회원마다 다르다)</td><td>Domain 01</td></tr>
+    <tr><td><code>POST /api/members</code> → 201, 400, 409. 오류는 Problem Details</td><td>ADR-0005</td></tr>
+    <tr><td>비밀번호는 BCrypt로 해시한다</td><td>ADR-0003</td></tr>
+  </table>
+
+  <h3>이 커밋의 전</h3>
+  <ul>
+    <li><code>domain</code>에 타입 4개가 있었다: <code>Member</code>, <code>Email</code>, <code>Username</code>, <code>PasswordHash</code>. JPA는 없었다.</li>
+    <li><code>application</code>과 <code>adapter</code>는 비어 있었다. 엔드포인트가 없었다.</li>
+    <li>아키텍처 테스트의 규칙 2, 4, 5는 검사할 클래스가 없어서 <code>allowEmptyShould(true)</code>로 통과했다.</li>
+  </ul>
+
+  <h3>코드의 모양을 정하는 규칙 3개</h3>
+  <p>이 커밋의 패키지 구조는 ADR-0002의 규칙에서 나온다. 코드를 읽기 전에 이 3개를 기억한다.</p>
+  <ul>
+    <li><b>규칙 2</b>: <code>application</code>은 <code>adapter</code>를 모른다. 그래서 DB와 BCrypt는 인터페이스(나가는 포트)의 뒤에 있다.</li>
+    <li><b>규칙 4</b>: <code>adapter</code>끼리는 서로 모른다. 웹은 영속성을 모른다.</li>
+    <li><b>규칙 5</b>: 웹 어댑터는 <code>application.port.in</code>만 쓴다. 유스케이스의 구현 클래스를 모른다.</li>
+  </ul>
+
+  <details>
+    <summary>record를 JPA의 <code>@Embeddable</code>로 쓰기</summary>
+    <p>Hibernate 6.2부터 record를 <code>@Embeddable</code>로 쓸 수 있다. DB에서 읽을 때 record의 생성자를 부른다. 그래서 값 객체의 검사가 읽을 때도 실행된다.</p>
+    <p>이 프로젝트의 값 객체 3개는 필드의 이름이 모두 <code>value</code>다. 한 엔티티에 3개를 넣으면 열의 이름이 겹친다. <code>@AttributeOverride</code>로 열의 이름을 바꾼다.</p>
+  </details>
+  <details>
+    <summary>Problem Details와 <code>ResponseEntityExceptionHandler</code></summary>
+    <p>RFC 9457은 오류의 본문의 모양을 정한다: <code>status</code>, <code>title</code>, <code>detail</code>, <code>instance</code>. 필드를 더할 수 있다. 미디어 타입은 <code>application/problem+json</code>이다. Spring의 <code>ProblemDetail</code>이 이 모양이다.</p>
+    <p><code>ResponseEntityExceptionHandler</code>를 상속하면, Spring MVC가 던지는 오류(JSON이 아닌 본문, 틀린 메서드 등)도 같은 모양이 된다.</p>
+  </details>
+
+  <p><b>풀어야 할 문제:</b> 가입의 규칙(R4, R6, R7)은 <code>domain</code>과 <code>application</code>에 둔다. HTTP, DB, BCrypt는 <code>adapter</code>에 둔다. 이 둘을 어떻게 이으면 규칙 2, 4, 5를 어기지 않는가?</p>
+</section>
+
+<section id="idea">
+  <h2>2. 핵심 아이디어</h2>
+  <p class="intuition">규칙은 안쪽에 있고 기술은 바깥쪽에 있다. 둘은 인터페이스로만 만난다. 화살표는 모두 안쪽을 향한다.</p>
+  <ul>
+    <li>웹 어댑터는 요청을 받아서 <b>들어오는 포트</b>(<code>RegisterMemberUseCase</code>)를 부른다. 누가 구현했는지 모른다.</li>
+    <li>유스케이스(<code>RegisterMemberService</code>)가 가입의 순서를 안다: 값을 검사한다 → 중복을 확인한다 → 해시를 만든다 → 저장한다.</li>
+    <li>값의 검사는 <code>domain</code>의 값 객체가 한다. 유스케이스는 값 객체를 만들 뿐이다.</li>
+    <li>"저장한다"와 "해시를 만든다"는 <b>나가는 포트</b>다. 유스케이스가 인터페이스를 정하고, 어댑터가 구현한다.</li>
+  </ul>
+  <figure>
+    <svg viewBox="0 0 720 300" role="img" aria-label="웹 어댑터는 들어오는 포트를 쓰고, 유스케이스는 도메인과 나가는 포트를 쓰고, 영속성과 보안 어댑터는 나가는 포트를 구현한다">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker>
+        <marker id="ahi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-headi"/></marker>
+      </defs>
+      <rect x="8" y="28" width="140" height="250" rx="10" class="d-band"/>
+      <rect x="160" y="28" width="350" height="250" rx="10" class="d-band d-core"/>
+      <rect x="522" y="28" width="190" height="250" rx="10" class="d-band"/>
+      <text x="14" y="20" class="d-lbl">adapter.web</text>
+      <text x="166" y="20" class="d-lbl">application + domain</text>
+      <text x="528" y="20" class="d-lbl">adapter.persistence · security</text>
+
+      <text x="16" y="58" class="d-sub">POST /api/members</text>
+      <rect x="14" y="70" width="128" height="40" rx="6" class="d-box"/><text x="22" y="87" class="d-txt">MemberController</text><text x="22" y="102" class="d-sub">요청 → 명령, 예외 → 응답</text>
+
+      <rect x="170" y="70" width="158" height="40" rx="6" class="d-gate"/><text x="178" y="87" class="d-txt">RegisterMemberUseCase</text><text x="178" y="102" class="d-sub">port.in (인터페이스)</text>
+      <rect x="342" y="70" width="160" height="40" rx="6" class="d-box"/><text x="350" y="87" class="d-txt">RegisterMemberService</text><text x="350" y="102" class="d-sub">service: R6, R7, 순서</text>
+
+      <rect x="170" y="196" width="158" height="68" rx="6" class="d-member"/><text x="178" y="214" class="d-lbl">domain</text><text x="178" y="232" class="d-txt">Username · Email</text><text x="178" y="249" class="d-txt">Password · Member</text>
+
+      <rect x="342" y="140" width="160" height="124" rx="6" class="d-gate"/><text x="350" y="156" class="d-sub">port.out (인터페이스)</text>
+      <rect x="350" y="164" width="144" height="34" rx="5" class="d-box"/><text x="358" y="185" class="d-txt">MemberRepository</text>
+      <rect x="350" y="218" width="144" height="34" rx="5" class="d-box"/><text x="358" y="239" class="d-txt">PasswordHasher</text>
+
+      <rect x="532" y="164" width="170" height="34" rx="6" class="d-box"/><text x="538" y="185" class="d-txt">MemberPersistenceAdapter</text>
+      <text x="538" y="211" class="d-sub">JPA · H2</text>
+      <rect x="532" y="218" width="170" height="34" rx="6" class="d-box"/><text x="538" y="239" class="d-txt">BCryptPasswordHasher</text>
+      <text x="538" y="265" class="d-sub">spring-security-crypto</text>
+
+      <line x1="142" y1="90" x2="168" y2="90" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="342" y1="90" x2="330" y2="90" class="d-impl" marker-end="url(#ahi)"/>
+      <line x1="372" y1="110" x2="300" y2="194" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="440" y1="110" x2="440" y2="138" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="532" y1="181" x2="496" y2="181" class="d-impl" marker-end="url(#ahi)"/>
+      <line x1="532" y1="235" x2="496" y2="235" class="d-impl" marker-end="url(#ahi)"/>
+
+      <line x1="16" y1="292" x2="44" y2="292" class="d-arrow" marker-end="url(#ah)"/><text x="50" y="296" class="d-sub">쓴다</text>
+      <line x1="90" y1="292" x2="118" y2="292" class="d-impl" marker-end="url(#ahi)"/><text x="124" y="296" class="d-sub">구현한다</text>
+    </svg>
+    <figcaption>바깥의 세 어댑터는 가운데의 인터페이스만 본다. 가운데는 바깥을 보지 않는다.</figcaption>
+  </figure>
+  <p>이 그림에서 코드의 대부분을 예측할 수 있다. 상자 하나가 파일 하나다. 그림에 없는 것은 2개다: 예외 2개(<code>port.in</code>에 있다)와 조립하는 설정(<code>UseCaseConfig</code>).</p>
+</section>
+
+<section id="explore">
+  <h2>3. 직접 넣어 보기</h2>
+  <p>가입 요청을 만들고, 어느 단계에서 멈추는지 본다. 회원 <code>jake</code>가 이미 있다. <b>"이미 있는 값 + 짧은 비밀번호"</b>를 누르고 응답이 400인지 409인지 예측한 뒤에 확인한다.</p>
+  <div class="widget">
+    <div class="live">
+      <div class="w-grid">
+        <label>username <input id="f-username" type="text" autocomplete="off" spellcheck="false"></label>
+        <label>email <input id="f-email" type="text" autocomplete="off" spellcheck="false"></label>
+        <label>password <input id="f-password" type="text" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <div id="w-samples" class="w-samples"></div>
+      <table class="t readout">
+        <tr><th>① 값 객체를 만든다</th><td id="s-values"></td></tr>
+        <tr><th>② 이메일이 이미 있는가</th><td id="s-email"></td></tr>
+        <tr><th>③ 사용자 이름이 이미 있는가</th><td id="s-username"></td></tr>
+        <tr><th>④ 해시를 만들고 저장한다</th><td id="s-save"></td></tr>
+      </table>
+      <p class="w-cap">이 요청의 응답</p>
+      <pre id="w-response" class="w-pre"></pre>
+      <div class="w-actions">
+        <button type="button" id="w-send">보내기 (201이면 회원이 생긴다)</button>
+        <button type="button" id="w-reset">회원을 처음으로</button>
+      </div>
+      <p class="w-cap">저장된 회원</p>
+      <ul id="w-members" class="w-members"></ul>
+    </div>
+    <div class="static-fallback">
+      <p>회원 <code>jake</code> / <code>jake@example.com</code>이 이미 있을 때:</p>
+      <table class="t readout">
+        <tr><th>요청</th><th>상태</th><th>본문</th></tr>
+        <tr><td>셋 다 틀림<br>&quot; &quot; / &quot;jake@&quot; / &quot;short&quot;</td><td>400</td><td>{&quot;errors&quot;: {&quot;username&quot;: &quot;사용자 이름이 비어 있다&quot;, &quot;email&quot;: &quot;이메일의 형식이 올바르지 않다&quot;, &quot;password&quot;: &quot;비밀번호는 8자 이상이고 72바이트 이하여야 한다&quot;}}</td></tr>
+        <tr><td>이미 있는 값 + 짧은 비밀번호<br>&quot;jake&quot; / &quot;jake@example.com&quot; / &quot;short&quot;</td><td>400</td><td>{&quot;errors&quot;: {&quot;password&quot;: &quot;비밀번호는 8자 이상이고 72바이트 이하여야 한다&quot;}}</td></tr>
+        <tr><td>같은 이메일 (대문자)<br>&quot;finn&quot; / &quot;JAKE@Example.com&quot; / &quot;correct-horse-battery&quot;</td><td>409</td><td>{&quot;errors&quot;: {&quot;email&quot;: &quot;이미 있는 이메일이다&quot;}}</td></tr>
+        <tr><td>같은 사용자 이름<br>&quot;jake&quot; / &quot;finn@example.com&quot; / &quot;correct-horse-battery&quot;</td><td>409</td><td>{&quot;errors&quot;: {&quot;username&quot;: &quot;이미 있는 사용자 이름이다&quot;}}</td></tr>
+        <tr><td>한글 25자인 비밀번호<br>&quot;finn&quot; / &quot;finn@example.com&quot; / &quot;가&quot; × 25</td><td>400</td><td>{&quot;errors&quot;: {&quot;password&quot;: &quot;비밀번호는 8자 이상이고 72바이트 이하여야 한다&quot;}}</td></tr>
+        <tr><td>대문자만 다른 사용자 이름<br>&quot;Jake&quot; / &quot;finn@example.com&quot; / &quot;correct-horse-battery&quot;</td><td>201</td><td>{&quot;username&quot;: &quot;Jake&quot;, &quot;email&quot;: &quot;finn@example.com&quot;}</td></tr>
+      </table>
+    </div>
+    <div class="mirrors">같은 로직: <code>RegisterMemberService.register()</code>, <code>ApiExceptionHandler</code>, 값 객체 4개의 생성자. 실제 서버에 같은 요청 19개를 순서대로 보내고, 상태와 본문을 이 위젯의 결과와 대조했다. 해시는 흉내만 낸다 (BCrypt는 옮기지 않았다).</div>
+  </div>
+  <p>알아챌 것 3개:</p>
+  <ul>
+    <li>값의 오류(400)가 중복(409)보다 먼저다. 값이 하나라도 틀리면 저장소에 묻지 않는다.</li>
+    <li>값의 오류는 모두 모아서 한 번에 알려 준다. 중복은 하나씩 알려 준다. 이메일이 먼저다.</li>
+    <li><code>JAKE@Example.com</code>은 이미 있는 이메일이다. <code>Jake</code>는 새 사용자 이름이다. 이 차이는 유스케이스가 아니고 값 객체가 만든다.</li>
+  </ul>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 변경을 순서대로 읽기</h2>
+  <p>plan의 "안쪽 순서"를 따른다: 수용 테스트 → 도메인 → 유스케이스와 포트 → 나가는 어댑터 → 웹 어댑터 → 정리.</p>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 수용 테스트로 "끝"을 정한다</h3>
+    <p class="why">구현의 전에 28개를 썼다. 28개가 모두 실패했다. 이 테스트가 모두 통과하면 작업 4가 끝난다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/RegisterMemberAcceptanceTests.java</b> — 서버 전체를 띄우고 실제 포트에 HTTP 요청을 보낸다. 이름이 <code>ac1_N_</code>으로 시작한다.</p>
+<pre class="diff"><span class="skip">… RegisterMemberAcceptanceTests.java — 앞의 30줄 (package, import, 주석) …</span><span class="add">@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)</span><span class="add">@AutoConfigureRestTestClient</span><span class="add">class RegisterMemberAcceptanceTests {</span><span class="add"></span><span class="add">	private static final String PASSWORD = "correct-horse-battery";</span><span class="add"></span><span class="add">	@Autowired</span><span class="add">	private RestTestClient client;</span><span class="add"></span><span class="add">	@Autowired</span><span class="add">	private DataSource dataSource;</span><span class="add"></span><span class="add">	/** 테스트마다 다른 회원을 쓴다. DB는 테스트끼리 함께 쓴다. */</span><span class="add">	private final String id = UUID.randomUUID().toString().substring(0, 8);</span><span class="add">	private final String username = "jake-" + id;</span><span class="add">	private final String email = "jake-" + id + "@example.com";</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void ac1_1_registering_with_valid_values_creates_a_member() {</span><span class="add">		register(username, email, PASSWORD)</span><span class="add">				.expectStatus().isCreated()</span><span class="add">				.expectBody()</span><span class="add">				.jsonPath("$.username").isEqualTo(username)</span><span class="add">				.jsonPath("$.email").isEqualTo(email);</span><span class="add">	}</span><span class="skip"></span><span class="add">	@ParameterizedTest</span><span class="add">	@MethodSource("emptyValues")</span><span class="add">	void ac1_2_an_empty_value_is_rejected_and_the_field_is_named(String field, String value) {</span><span class="add">		Map&lt;String, String&gt; body = validBody();</span><span class="add">		if (value == null) {</span><span class="add">			body.remove(field);</span><span class="add">		}</span><span class="add">		else {</span><span class="add">			body.put(field, value);</span><span class="add">		}</span><span class="add"></span><span class="add">		post(body)</span><span class="add">				.expectStatus().isBadRequest()</span><span class="add">				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)</span><span class="add">				.expectBody()</span><span class="add">				.jsonPath("$.errors." + field).exists()</span><span class="add">				.jsonPath("$.errors.length()").isEqualTo(1);</span><span class="add">	}</span><span class="skip">… ac1_2의 나머지, ac1_3 ~ ac1_6: 테스트 메서드 7개 (같은 모양) …</span><span class="add">	@Test</span><span class="add">	void ac1_7_the_result_of_a_registration_has_only_username_and_email() {</span><span class="add">		String body = bodyOf(register(username, email, PASSWORD).expectStatus().isCreated());</span><span class="add"></span><span class="add">		assertThat(new JsonMapper().readValue(body, Map.class).keySet()).containsExactlyInAnyOrder("username", "email");</span><span class="add">		assertThat(body).doesNotContain(PASSWORD).doesNotContain(storedPasswordHash());</span><span class="add">	}</span><span class="skip">… ac1_7의 두 번째, ac1_8: 테스트 메서드 2개 …</span><span class="add">	/** plan 01의 작업 4: 저장된 값이 비밀번호의 원문이 아니다. (R5) */</span><span class="add">	@Test</span><span class="add">	void r5_the_stored_value_is_not_the_raw_password() {</span><span class="add">		register(username, email, PASSWORD).expectStatus().isCreated();</span><span class="add"></span><span class="add">		assertThat(storedPasswordHash()).isNotBlank().doesNotContain(PASSWORD);</span><span class="add">	}</span><span class="skip">… ADR-0005의 테스트 1개, 요청을 만드는 도우미 4개 …</span><span class="add">	private String storedPasswordHash() {</span><span class="add">		return new JdbcTemplate(dataSource).queryForObject("select password_hash from member where email = ?",</span><span class="add">				String.class, email);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>테스트는 DB를 함께 쓴다. 그래서 테스트마다 다른 <code>username</code>과 <code>email</code>을 만든다 (<code>UUID</code>).</li>
+      <li><code>ac1_2</code>는 9번 돈다: 필드 3개 × 빈 값 3가지(없음, <code>""</code>, 공백). <code>errors</code>에 그 필드 하나만 있는지 본다.</li>
+      <li><code>ac1_7</code>은 본문의 키가 <code>username</code>, <code>email</code>뿐인지 본다. "password가 없다"보다 강하다. 새 필드를 더하면 실패한다.</li>
+      <li><code>storedPasswordHash()</code>는 JPA를 거치지 않는다. SQL로 열을 직접 읽는다. "저장된 값"을 확인하는 가장 직접적인 방법이다.</li>
+    </ul>
+    <p class="bridge">끝이 정해졌다. 이제 안쪽부터 만든다. 가장 안쪽은 아직 없는 규칙 R4다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 비밀번호의 길이를 타입으로 만든다 (R4)</h3>
+    <p class="why">작업 3과 같은 방법이다. 규칙을 생성자에 넣는다. 다른 점: 이 값은 저장하지 않는다. 가입의 동안에만 있다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/domain/PasswordTests.java</b> — R4의 단위 테스트. 14개.</p>
+<pre class="diff"><span class="skip">… PasswordTests.java — 앞의 17줄 (package, import, 주석) …</span><span class="add">class PasswordTests {</span><span class="add"></span><span class="add">	@ParameterizedTest</span><span class="add">	@MethodSource("passwordsAtTheLimits")</span><span class="add">	void r4_password_at_the_limits_is_accepted(String value) {</span><span class="add">		assertThat(new Password(value).value()).isEqualTo(value);</span><span class="add">	}</span><span class="add"></span><span class="add">	static Stream&lt;String&gt; passwordsAtTheLimits() {</span><span class="add">		return Stream.of("12345678", "a".repeat(72), "가".repeat(24));</span><span class="add">	}</span><span class="skip">… 거부하는 값의 테스트 2개 (7자, 73바이트, 한글 25자 등) …</span><span class="add">	/** 한 자는 코드 포인트 하나다. 😀는 한 자이고, UTF-16으로는 char 2개다. */</span><span class="add">	@Test</span><span class="add">	void r4_characters_are_counted_as_code_points() {</span><span class="add">		assertThatNoException().isThrownBy(() -&gt; new Password("😀".repeat(8)));</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; new Password("😀".repeat(4)));</span><span class="add">	}</span><span class="skip">… 테스트 3개: 문자 종류의 조건이 없다, 값을 바꾸지 않는다, toString에 값이 없다 …</span></pre>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Password.java</b> — 값 객체. 비밀번호의 원문이다.</p>
+<pre class="diff"><span class="skip">… Password.java — 앞의 8줄 (package, import, 주석) …</span><span class="add">public record Password(String value) {</span><span class="add"></span><span class="add">	private static final int MIN_CHARACTERS = 8;</span><span class="add">	private static final int MAX_BYTES = 72;</span><span class="add"></span><span class="add">	public Password {</span><span class="add">		if (value == null || value.codePointCount(0, value.length()) &lt; MIN_CHARACTERS</span><span class="add">				|| value.getBytes(StandardCharsets.UTF_8).length &gt; MAX_BYTES) {</span><span class="add">			throw new IllegalArgumentException("비밀번호는 8자 이상이고 72바이트 이하여야 한다");</span><span class="add">		}</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 원문이 로그에 남지 않게 한다. */</span><span class="add">	@Override</span><span class="add">	public String toString() {</span><span class="add">		return "Password[****]";</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>아래쪽의 한계는 <b>글자의 수</b>다. 위쪽의 한계는 <b>바이트의 수</b>다. 단위가 다르다. 한글 24자는 72바이트이고 통과한다. 한글 25자는 75바이트이고 거부된다.</li>
+      <li><code>codePointCount</code>를 쓴다. <code>length()</code>는 UTF-16의 char를 센다. 😀 4개는 <code>length()</code>로는 8이다. 그래서 <code>length()</code>를 쓰면 4자인 비밀번호가 통과한다.</li>
+      <li><code>toString()</code>을 가렸다. record의 기본 <code>toString()</code>은 값을 보여 준다. 원문이 로그에 남으면 안 된다.</li>
+    </ul>
+    <p class="file-role"><b>src/test/java/trealworld/domain/MemberTests.java</b> — R5의 테스트를 넓혔다. 회원에 <code>Password</code> 타입의 필드도 금지한다.</p>
+<pre class="diff"><span class="skip">… -43,5 +43,5 …</span><span class="ctx"></span><span class="ctx">	/**</span><span class="del">	 * 회원에는 글자를 그대로 담는 필드가 없다. 비밀번호의 원문을 둘 자리가 없다.</span><span class="add">	 * 회원에는 글자를 그대로 담는 필드가 없다. 비밀번호(Password)의 필드도 없다. 원문을 둘 자리가 없다.</span><span class="ctx">	 */</span><span class="ctx">	@Test</span><span class="skip">… -50,5 +50,5 …</span><span class="ctx">				.isNotEmpty()</span><span class="ctx">				.noneMatch(type -&gt; CharSequence.class.isAssignableFrom(type) || type == char[].class</span><span class="del">						|| type == byte[].class);</span><span class="add">						|| type == byte[].class || type == Password.class);</span><span class="ctx">	}</span><span class="ctx"></span></pre>
+    <p class="bridge">원문을 담는 타입이 생겼다. 이제 이 타입을 쓰는 곳, 가입의 순서를 아는 곳을 만든다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 유스케이스와 포트를 만든다 (R6, R7)</h3>
+    <p class="why">R6과 R7은 회원 하나가 혼자 지킬 수 없다. 다른 회원을 알아야 한다. 그래서 "가입"이 저장소에 물어서 지킨다 (Domain 01).</p>
+
+    <p class="file-role"><b>src/main/java/trealworld/application/port/in/</b> — 들어오는 포트. 웹 어댑터가 볼 수 있는 것의 전부다. 파일 4개.</p>
+<pre class="diff"><span class="skip">… RegisterMemberUseCase.java — 앞의 7줄 (package, import, 주석) …</span><span class="add">public interface RegisterMemberUseCase {</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * @throws InvalidValuesException 값이 비었거나 형식이 틀리다</span><span class="add">	 * @throws DuplicateMemberException 이메일이나 사용자 이름이 이미 있다</span><span class="add">	 */</span><span class="add">	Member register(RegisterMemberCommand command);</span><span class="add"></span><span class="add">}</span><span class="skip">… RegisterMemberCommand.java — 앞의 5줄 (package, import, 주석) …</span><span class="add">public record RegisterMemberCommand(String username, String email, String password) {</span><span class="skip">… RegisterMemberCommand.java — 뒤의 8줄 …</span><span class="skip">… InvalidValuesException.java — 앞의 9줄 (package, import, 주석) …</span><span class="add">public class InvalidValuesException extends RuntimeException {</span><span class="add"></span><span class="add">	private final Map&lt;String, String&gt; errors;</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * @param errors 값의 이름과 이유. 순서를 지킨다</span><span class="add">	 */</span><span class="add">	public InvalidValuesException(Map&lt;String, String&gt; errors) {</span><span class="add">		super("값이 올바르지 않다: " + errors.keySet());</span><span class="add">		this.errors = Collections.unmodifiableMap(new LinkedHashMap&lt;&gt;(errors));</span><span class="add">	}</span><span class="skip">… InvalidValuesException.java — 뒤의 6줄 …</span><span class="skip">… DuplicateMemberException.java — 앞의 5줄 (package, import, 주석) …</span><span class="add">public class DuplicateMemberException extends RuntimeException {</span><span class="add"></span><span class="add">	private final String field;</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * @param field 이미 있는 값의 이름</span><span class="add">	 */</span><span class="add">	public DuplicateMemberException(String field, String message) {</span><span class="add">		super(message);</span><span class="add">		this.field = field;</span><span class="add">	}</span><span class="skip">… DuplicateMemberException.java — 뒤의 6줄 …</span></pre>
+    <ul>
+      <li>명령(<code>RegisterMemberCommand</code>)의 필드는 모두 <code>String</code>이다. 검사하기 전의 글자다. 값 객체가 아니다. 값 객체로 받으면 웹 어댑터가 값 객체를 만들어야 하고, 오류를 모으는 일도 웹 어댑터가 하게 된다.</li>
+      <li>예외 2개가 <code>port.in</code>에 있다. 웹 어댑터가 잡아야 하기 때문이다. 규칙 5는 웹 어댑터에게 이 패키지만 허락한다.</li>
+      <li><code>LinkedHashMap</code>으로 복사한다. <code>Map.copyOf</code>는 순서를 버린다. 서버에 <code>curl</code>을 보내서 알았다.</li>
+    </ul>
+
+    <p class="file-role"><b>src/main/java/trealworld/application/port/out/</b> — 나가는 포트. 유스케이스가 바깥에 바라는 것이다. 파일 2개.</p>
+<pre class="diff"><span class="skip">… MemberRepository.java — 앞의 9줄 (package, import, 주석) …</span><span class="add">public interface MemberRepository {</span><span class="add"></span><span class="add">	Member save(Member member);</span><span class="add"></span><span class="add">	boolean existsByEmail(Email email);</span><span class="add"></span><span class="add">	boolean existsByUsername(Username username);</span><span class="add"></span><span class="add">}</span><span class="skip">… PasswordHasher.java — 앞의 8줄 (package, import, 주석) …</span><span class="add">public interface PasswordHasher {</span><span class="add"></span><span class="add">	PasswordHash hash(Password password);</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>인자와 결과가 모두 <code>domain</code>의 타입이다. <code>hash(Password)</code>는 <code>PasswordHash</code>를 준다. 원문과 해시를 바꿔 넣으면 컴파일이 실패한다.</li>
+    </ul>
+
+    <p class="file-role"><b>src/test/java/trealworld/application/service/RegisterMemberServiceTests.java</b> — 유스케이스의 단위 테스트. 9개. Spring이 없다. 0.01초에 돈다.</p>
+<pre class="diff"><span class="skip">… RegisterMemberServiceTests.java — 앞의 25줄 (package, import, 주석) …</span><span class="add">class RegisterMemberServiceTests {</span><span class="add"></span><span class="add">	private static final String PASSWORD = "correct-horse-battery";</span><span class="add"></span><span class="add">	private final FakeMemberRepository members = new FakeMemberRepository();</span><span class="add">	private final FakePasswordHasher passwordHasher = new FakePasswordHasher();</span><span class="add">	private final RegisterMemberService service = new RegisterMemberService(members, passwordHasher);</span><span class="skip">… 테스트 3개: 저장한다, r4, r5 …</span><span class="add">	@Test</span><span class="add">	void r6_registering_with_an_email_that_exists_is_rejected() {</span><span class="add">		service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));</span><span class="add"></span><span class="add">		DuplicateMemberException exception = catchThrowableOfType(DuplicateMemberException.class,</span><span class="add">				() -&gt; service.register(new RegisterMemberCommand("finn", "jake@example.com", PASSWORD)));</span><span class="add"></span><span class="add">		assertThat(exception.getField()).isEqualTo("email");</span><span class="add">		assertThat(members.saved).hasSize(1);</span><span class="add">	}</span><span class="skip">… 테스트 4개: r6의 대소문자, r7 2개, 모든 값의 오류를 알려 준다 …</span><span class="add">	/** 값의 오류가 먼저다. 값이 틀리면 저장소에 묻지 않는다. */</span><span class="add">	@Test</span><span class="add">	void invalid_values_are_reported_before_duplicates() {</span><span class="add">		service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));</span><span class="add"></span><span class="add">		assertThatExceptionOfType(InvalidValuesException.class)</span><span class="add">				.isThrownBy(() -&gt; service.register(new RegisterMemberCommand("jake", "jake@example.com", "short")));</span><span class="add">	}</span><span class="skip"></span><span class="add">	private static class FakeMemberRepository implements MemberRepository {</span><span class="add"></span><span class="add">		private final List&lt;Member&gt; saved = new ArrayList&lt;&gt;();</span><span class="add"></span><span class="add">		@Override</span><span class="add">		public Member save(Member member) {</span><span class="add">			saved.add(member);</span><span class="add">			return member;</span><span class="add">		}</span><span class="add"></span><span class="add">		@Override</span><span class="add">		public boolean existsByEmail(Email email) {</span><span class="add">			return saved.stream().anyMatch(member -&gt; member.getEmail().equals(email));</span><span class="add">		}</span><span class="add"></span><span class="add">		@Override</span><span class="add">		public boolean existsByUsername(Username username) {</span><span class="add">			return saved.stream().anyMatch(member -&gt; member.getUsername().equals(username));</span><span class="add">		}</span><span class="add"></span><span class="add">	}</span><span class="add"></span><span class="add">	private static class FakePasswordHasher implements PasswordHasher {</span><span class="add"></span><span class="add">		private final List&lt;String&gt; hashed = new ArrayList&lt;&gt;();</span><span class="add"></span><span class="add">		@Override</span><span class="add">		public PasswordHash hash(Password password) {</span><span class="add">			hashed.add(password.value());</span><span class="add">			return new PasswordHash("hash-of-" + password.value().length());</span><span class="add">		}</span><span class="add"></span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>가짜 포트 2개는 30줄이다. 목(mock) 라이브러리를 쓰지 않았다. 포트가 작아서 손으로 쓰는 것이 더 짧다.</li>
+      <li>가짜 저장소는 <code>equals</code>로 비교한다. <code>Email</code>이 소문자로 바꾸므로, 대소문자만 다른 이메일은 여기서도 같다. R6의 "대소문자"는 저장소가 아니고 값 객체가 지킨다.</li>
+    </ul>
+
+    <p class="file-role"><b>src/main/java/trealworld/application/service/RegisterMemberService.java</b> — 가입의 순서를 아는 곳. 이 커밋의 중심이다.</p>
+<pre class="diff"><span class="skip">… RegisterMemberService.java — 앞의 20줄 (package, import, 주석) …</span><span class="add">public class RegisterMemberService implements RegisterMemberUseCase {</span><span class="add"></span><span class="add">	private final MemberRepository members;</span><span class="add">	private final PasswordHasher passwordHasher;</span><span class="add"></span><span class="add">	public RegisterMemberService(MemberRepository members, PasswordHasher passwordHasher) {</span><span class="add">		this.members = members;</span><span class="add">		this.passwordHasher = passwordHasher;</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public Member register(RegisterMemberCommand command) {</span><span class="add">		Map&lt;String, String&gt; errors = new LinkedHashMap&lt;&gt;();</span><span class="add">		Username username = value("username", () -&gt; new Username(command.username()), errors);</span><span class="add">		Email email = value("email", () -&gt; new Email(command.email()), errors);</span><span class="add">		Password password = value("password", () -&gt; new Password(command.password()), errors);</span><span class="add">		if (!errors.isEmpty()) {</span><span class="add">			throw new InvalidValuesException(errors);</span><span class="add">		}</span><span class="add"></span><span class="add">		if (members.existsByEmail(email)) {</span><span class="add">			throw new DuplicateMemberException("email", "이미 있는 이메일이다");</span><span class="add">		}</span><span class="add">		if (members.existsByUsername(username)) {</span><span class="add">			throw new DuplicateMemberException("username", "이미 있는 사용자 이름이다");</span><span class="add">		}</span><span class="add"></span><span class="add">		return members.save(Member.register(username, email, passwordHasher.hash(password)));</span><span class="add">	}</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * 값 객체를 만든다. 규칙을 어기면 값의 이름과 이유를 errors에 적는다.</span><span class="add">	 */</span><span class="add">	private static &lt;T&gt; T value(String name, Supplier&lt;T&gt; constructor, Map&lt;String, String&gt; errors) {</span><span class="add">		try {</span><span class="add">			return constructor.get();</span><span class="add">		}</span><span class="add">		catch (IllegalArgumentException exception) {</span><span class="add">			errors.put(name, exception.getMessage());</span><span class="add">			return null;</span><span class="add">		}</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>Spring의 애너테이션이 없다. <code>@Service</code>도 <code>@Transactional</code>도 없다. 보통의 Java 클래스다.</li>
+      <li><code>register()</code>는 네 덩어리다: 값 객체 3개를 만든다 → 틀린 것이 있으면 멈춘다 → 중복을 확인한다 → 해시를 만들고 저장한다.</li>
+      <li><code>value()</code>가 <code>IllegalArgumentException</code>을 잡는다. 하나가 틀려도 멈추지 않는다. 나머지도 만들어 본다. 그래서 틀린 값을 모두 알려 줄 수 있다.</li>
+      <li>해시는 가장 마지막이다. BCrypt는 일부러 느리다. 거부할 요청에 해시를 만들지 않는다.</li>
+    </ul>
+    <p class="bridge">가입의 규칙이 모두 생겼고, DB 없이 테스트된다. 이제 포트의 뒤에 실제 기술을 붙인다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>단계 4 — 나가는 포트의 뒤에 기술을 붙인다</h3>
+    <p class="why">나가는 포트는 2개다. 구현도 2개다: JPA와 BCrypt. 그 전에 <code>domain</code>이 JPA를 알아야 한다 (ADR-0002의 타협).</p>
+
+    <p class="file-role"><b>src/main/java/trealworld/domain/Member.java</b> — 엔티티가 됐다. id가 생겼다.</p>
+<pre class="diff"><span class="skip">… -1,5 +1,14 …</span><span class="ctx">package trealworld.domain;</span><span class="ctx"></span><span class="add">import jakarta.persistence.AttributeOverride;</span><span class="add">import jakarta.persistence.Column;</span><span class="add">import jakarta.persistence.Embedded;</span><span class="add">import jakarta.persistence.Entity;</span><span class="add">import jakarta.persistence.GeneratedValue;</span><span class="add">import jakarta.persistence.GenerationType;</span><span class="add">import jakarta.persistence.Id;</span><span class="add">import lombok.AccessLevel;</span><span class="ctx">import lombok.Getter;</span><span class="add">import lombok.NoArgsConstructor;</span><span class="ctx"></span><span class="ctx">/**</span><span class="skip">… -7,10 +16,25 …</span><span class="ctx"> * 비밀번호의 원문은 가지지 않는다. (R5)</span><span class="ctx"> */</span><span class="add">@Entity</span><span class="ctx">@Getter</span><span class="add">@NoArgsConstructor(access = AccessLevel.PROTECTED)</span><span class="ctx">public class Member {</span><span class="ctx"></span><span class="del">	private final Username username;</span><span class="del">	private final Email email;</span><span class="del">	private final PasswordHash passwordHash;</span><span class="add">	/** 회원의 식별자. 저장할 때 생긴다. */</span><span class="add">	@Id</span><span class="add">	@GeneratedValue(strategy = GenerationType.IDENTITY)</span><span class="add">	private Long id;</span><span class="add"></span><span class="add">	@Embedded</span><span class="add">	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true))</span><span class="add">	private Username username;</span><span class="add"></span><span class="add">	@Embedded</span><span class="add">	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true))</span><span class="add">	private Email email;</span><span class="add"></span><span class="add">	@Embedded</span><span class="add">	@AttributeOverride(name = "value", column = @Column(name = "password_hash", nullable = false))</span><span class="add">	private PasswordHash passwordHash;</span><span class="ctx"></span><span class="ctx">	private Member(Username username, Email email, PasswordHash passwordHash) {</span></pre>
+    <ul>
+      <li><span class="warn">필드에서 <code>final</code>이 사라졌다.</span> <code>protected</code> 기본 생성자가 생겼다. JPA가 요구한다. R1("항상 있다")을 코드가 보장하는 정도가 약해졌다. 리뷰 메모 5를 본다.</li>
+      <li>열의 이름 3개를 여기서 정한다. 값 객체의 필드의 이름이 모두 <code>value</code>이기 때문이다.</li>
+      <li><code>username</code>과 <code>email</code>에 <code>unique</code>가 있다. R6, R7의 마지막 방어선이다. 리뷰 메모 1을 본다.</li>
+    </ul>
+
+    <p class="file-role"><b>src/main/java/trealworld/domain/Email.java</b> — <code>@Embeddable</code>을 붙였다. <code>Username.java</code>와 <code>PasswordHash.java</code>도 같은 변경이다 (import 1줄, 애너테이션 1줄).</p>
+<pre class="diff"><span class="skip">… -4,7 +4,10 …</span><span class="ctx">import java.util.regex.Pattern;</span><span class="ctx"></span><span class="add">import jakarta.persistence.Embeddable;</span><span class="add"></span><span class="ctx">/**</span><span class="ctx"> * 이메일. 올바른 형식이고, 소문자로 저장한다. (R2)</span><span class="ctx"> */</span><span class="add">@Embeddable</span><span class="ctx">public record Email(String value) {</span><span class="ctx"></span></pre>
+
+    <p class="file-role"><b>src/main/java/trealworld/adapter/persistence/</b> — 영속성 어댑터. 파일 2개. 둘 다 패키지의 밖에서 보이지 않는다.</p>
+<pre class="diff"><span class="skip">… MemberJpaRepository.java — 앞의 6줄 (package, import, 주석) …</span><span class="add">interface MemberJpaRepository extends JpaRepository&lt;Member, Long&gt; {</span><span class="add"></span><span class="add">	boolean existsByEmailValue(String email);</span><span class="add"></span><span class="add">	boolean existsByUsernameValue(String username);</span><span class="add"></span><span class="add">}</span><span class="skip">… MemberPersistenceAdapter.java — 앞의 12줄 (package, import, 주석) …</span><span class="add">@Repository</span><span class="add">class MemberPersistenceAdapter implements MemberRepository {</span><span class="add"></span><span class="add">	private final MemberJpaRepository jpaRepository;</span><span class="add"></span><span class="add">	MemberPersistenceAdapter(MemberJpaRepository jpaRepository) {</span><span class="add">		this.jpaRepository = jpaRepository;</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public Member save(Member member) {</span><span class="add">		return jpaRepository.save(member);</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public boolean existsByEmail(Email email) {</span><span class="add">		return jpaRepository.existsByEmailValue(email.value());</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public boolean existsByUsername(Username username) {</span><span class="add">		return jpaRepository.existsByUsernameValue(username.value());</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li><code>existsByEmailValue</code>는 Spring Data가 <code>email.value</code>의 경로로 읽는다. 이 이름은 어댑터의 안에만 있다. 포트의 이름은 <code>existsByEmail(Email)</code>이다.</li>
+      <li>어댑터가 하는 일은 값 객체에서 <code>String</code>을 꺼내는 것뿐이다. 얇다. 그래도 둔다. 포트의 모양이 Spring Data의 규칙에 묶이지 않는다.</li>
+    </ul>
+
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/BCryptPasswordHasher.java</b> — 보안 어댑터. BCrypt를 아는 유일한 클래스다.</p>
+<pre class="diff"><span class="skip">… BCryptPasswordHasher.java — 앞의 13줄 (package, import, 주석) …</span><span class="add">@Component</span><span class="add">class BCryptPasswordHasher implements PasswordHasher {</span><span class="add"></span><span class="add">	private final PasswordEncoder encoder = new BCryptPasswordEncoder();</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public PasswordHash hash(Password password) {</span><span class="add">		return new PasswordHash(encoder.encode(password.value()));</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+
+    <p class="file-role"><b>build.gradle.kts</b> — 의존성 1개.</p>
+<pre class="diff"><span class="skip">… -21,4 +21,5 …</span><span class="ctx">	implementation("org.springframework.boot:spring-boot-starter-data-jpa")</span><span class="ctx">	implementation("org.springframework.boot:spring-boot-starter-webmvc")</span><span class="add">	implementation("org.springframework.security:spring-security-crypto")</span><span class="ctx">	compileOnly("org.projectlombok:lombok")</span><span class="ctx">	runtimeOnly("com.h2database:h2")</span></pre>
+    <ul>
+      <li>스타터(<code>spring-boot-starter-security</code>)가 아니다. <code>crypto</code> 모듈만이다. 스타터를 넣으면 필터 체인이 켜지고, 모든 요청이 401이 된다. 필터 체인은 작업 5~6에서 넣는다.</li>
+    </ul>
+    <p class="bridge">유스케이스가 실제로 저장하고 해시할 수 있다. 남은 것은 입구다. HTTP 요청을 유스케이스로 보내야 한다.</p>
+  </div>
+
+  <div class="step" id="step5">
+    <h3>단계 5 — HTTP를 유스케이스에 연결한다</h3>
+    <p class="why">웹 어댑터는 번역만 한다. 요청을 명령으로, 회원을 응답으로, 예외를 Problem Details로 바꾼다. 규칙은 없다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/web/</b> — 웹 어댑터. 파일 4개.</p>
+<pre class="diff"><span class="skip">… MemberController.java — 앞의 13줄 (package, import, 주석) …</span><span class="add">@RestController</span><span class="add">@RequestMapping("/api/members")</span><span class="add">class MemberController {</span><span class="add"></span><span class="add">	private final RegisterMemberUseCase registerMember;</span><span class="add"></span><span class="add">	MemberController(RegisterMemberUseCase registerMember) {</span><span class="add">		this.registerMember = registerMember;</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 가입. (ADR-0005: POST /api/members → 201) */</span><span class="add">	@PostMapping</span><span class="add">	@ResponseStatus(HttpStatus.CREATED)</span><span class="add">	MemberResponse register(@RequestBody RegisterMemberRequest request) {</span><span class="add">		Member member = registerMember</span><span class="add">				.register(new RegisterMemberCommand(request.username(), request.email(), request.password()));</span><span class="add">		return MemberResponse.of(member);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span><span class="skip">… RegisterMemberRequest.java — 앞의 5줄 (package, import, 주석) …</span><span class="add">record RegisterMemberRequest(String username, String email, String password) {</span><span class="skip">… RegisterMemberRequest.java — 뒤의 8줄 …</span><span class="skip">… MemberResponse.java — 앞의 7줄 (package, import, 주석) …</span><span class="add">record MemberResponse(String username, String email) {</span><span class="add"></span><span class="add">	static MemberResponse of(Member member) {</span><span class="add">		return new MemberResponse(member.getUsername().value(), member.getEmail().value());</span><span class="add">	}</span><span class="add"></span><span class="add">}</span><span class="skip">… ApiExceptionHandler.java — 앞의 17줄 (package, import, 주석) …</span><span class="add">@RestControllerAdvice</span><span class="add">class ApiExceptionHandler extends ResponseEntityExceptionHandler {</span><span class="add"></span><span class="add">	/** 값이 비었거나 형식이 틀리다 → 400. 어느 값이 문제인지 errors에 넣는다. */</span><span class="add">	@ExceptionHandler(InvalidValuesException.class)</span><span class="add">	ProblemDetail invalidValues(InvalidValuesException exception) {</span><span class="add">		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "값이 올바르지 않다");</span><span class="add">		problem.setProperty("errors", exception.getErrors());</span><span class="add">		return problem;</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 이메일이나 사용자 이름이 이미 있다 → 409. */</span><span class="add">	@ExceptionHandler(DuplicateMemberException.class)</span><span class="add">	ProblemDetail duplicateMember(DuplicateMemberException exception) {</span><span class="add">		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());</span><span class="add">		problem.setProperty("errors", Map.of(exception.getField(), exception.getMessage()));</span><span class="add">		return problem;</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>컨트롤러에 <code>@Valid</code>가 없다. Bean Validation을 쓰지 않는다. 값의 규칙은 <code>domain</code> 한 곳에만 있다.</li>
+      <li><code>MemberResponse</code>에는 필드가 2개뿐이다. <code>Member</code>를 그대로 내보내면 <code>passwordHash</code>와 <code>id</code>가 나간다 (AC-1.7).</li>
+      <li>요청(<code>RegisterMemberRequest</code>)과 명령(<code>RegisterMemberCommand</code>)은 모양이 같다. 그래도 둘이다. 요청은 JSON의 모양이고 웹의 것이다. 명령은 유스케이스의 것이다.</li>
+      <li>409의 본문에도 <code>errors</code>가 있다. 400과 같은 모양이다. 클라이언트는 한 가지 방법으로 "어느 필드인가"를 읽는다.</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/UseCaseConfig.java</b> — 조립. 유스케이스를 빈으로 등록한다. 어느 층에도 속하지 않는다.</p>
+<pre class="diff"><span class="skip">… UseCaseConfig.java — 앞의 13줄 (package, import, 주석) …</span><span class="add">@Configuration(proxyBeanMethods = false)</span><span class="add">class UseCaseConfig {</span><span class="add"></span><span class="add">	@Bean</span><span class="add">	RegisterMemberUseCase registerMemberUseCase(MemberRepository members, PasswordHasher passwordHasher) {</span><span class="add">		return new RegisterMemberService(members, passwordHasher);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li><code>RegisterMemberService</code>에 <code>@Service</code>가 없으므로 컴포넌트 스캔이 찾지 못한다. 이 클래스가 대신 만든다.</li>
+      <li>빈의 타입은 인터페이스(<code>RegisterMemberUseCase</code>)다. 컨트롤러는 인터페이스로 주입받는다.</li>
+    </ul>
+    <p class="bridge">수용 테스트 28개가 통과했다. 세 층에 모두 클래스가 생겼다. 아키텍처 테스트의 남은 안전장치를 뗄 수 있다.</p>
+  </div>
+
+  <div class="step" id="step6">
+    <h3>단계 6 — 아키텍처 테스트의 남은 안전장치를 뗀다</h3>
+    <p class="why">작업 3에서 규칙 1, 3을 뗐다. 이번에 규칙 2, 4, 5를 뗀다. 이제 <code>allowEmptyShould</code>는 0개다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/ArchitectureTests.java</b> — ADR-0002의 규칙 1~5.</p>
+<pre class="diff"><span class="skip">… -39,5 +39,4 …</span><span class="ctx">				.should().dependOnClassesThat().resideInAPackage(ADAPTER)</span><span class="ctx">				.as("ADR-0002 규칙 2: application은 adapter에 의존하지 않는다")</span><span class="del">				.allowEmptyShould(true)</span><span class="ctx">				.check(classes);</span><span class="ctx">	}</span><span class="skip">… -56,5 +55,4 …</span><span class="ctx">				.should().notDependOnEachOther()</span><span class="ctx">				.as("ADR-0002 규칙 4: adapter끼리는 서로 의존하지 않는다")</span><span class="del">				.allowEmptyShould(true)</span><span class="ctx">				.check(classes);</span><span class="ctx">	}</span><span class="skip">… -65,5 +63,4 …</span><span class="ctx">				.should().dependOnClassesThat(resideInAPackage(APPLICATION).and(not(resideInAPackage(INCOMING_PORT))))</span><span class="ctx">				.as("ADR-0002 규칙 5: 웹 어댑터는 들어오는 포트를 통해서만 application을 쓴다")</span><span class="del">				.allowEmptyShould(true)</span><span class="ctx">				.check(classes);</span><span class="ctx">	}</span></pre>
+    <ul>
+      <li>확인한 것: <code>adapter.web</code>의 클래스가 <code>RegisterMemberService</code>를 직접 쓰면 규칙 5가 실패한다. <code>adapter.security</code>가 <code>adapter.web</code>을 쓰면 규칙 4가 실패한다.</li>
+      <li>이 커밋의 구조는 규칙 5개를 모두 통과한다. 처음으로 "지킬 코드가 있는 초록"이다.</li>
+    </ul>
+    <p class="bridge">작업 4의 검증 항목이 끝났다. 다음 작업(로그인)은 같은 구조에 유스케이스 하나를 더한다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>docs/domain/01-member.md</code> — 비밀번호를 값 객체(<code>Password</code>)로 적었다. R4에 "한 자는 코드 포인트 하나"를 더했다. R4의 "지키는 곳"을 "비밀번호 (가입이 만든다)"로 고쳤다.</li>
+    <li><code>docs/adr/0001-tech-stack.md</code> — <code>spring-security-crypto</code>를 더한 것과, Bean Validation을 쓰지 않는 것을 적었다.</li>
+    <li><code>docs/adr/0002-hexagonal-architecture.md</code> — 패키지의 이름 2개(<code>application.port.out</code>, <code>application.service</code>)와, "<code>application</code>은 Spring을 쓰지 않는다", <code>UseCaseConfig</code>를 적었다.</li>
+    <li><code>docs/adr/0005-api-conventions.md</code> — <code>errors</code>의 모양을 적었다.</li>
+    <li><code>docs/journal/2026-11-17.md</code> — 스텝 35(작업 4의 기록), 스텝 36(커밋). +98줄.</li>
+    <li><code>src/main/java/trealworld/domain/Username.java</code>, <code>PasswordHash.java</code> — <code>@Embeddable</code>. 단계 4의 <code>Email.java</code>와 같다.</li>
+  </ul>
+  <p class="callout-warn">위의 문서 4개는 승인된 문서다. AI가 구현하면서 고쳤다. 리뷰 메모 8을 본다.</p>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>표시: <b>[확인]</b>은 서버를 띄우고 요청을 보내서 본 것이다. <b>[읽음]</b>은 코드에서 읽은 것이다. <b>[추정]</b>은 아직 일어나지 않은 일이다.</p>
+  <ol>
+    <li><b>같은 값으로 동시에 가입하면 500이 나온다. [확인]</b> 같은 요청 12개를 동시에 보냈다. 201이 1개, 409가 2개, <span class="warn">500이 9개</span>였다. 요청들이 모두 "이메일이 없다"는 답을 받고 저장한다. DB의 unique 제약이 막는다. 회원은 1명만 생긴다. R6은 지켜진다. 그러나 응답이 틀리다. 500의 본문은 Problem Details도 아니다 (Spring Boot의 기본 모양이다). 유스케이스에 트랜잭션이 없는 것은 원인이 아니다. 트랜잭션이 있어도 같다. 제약의 위반을 409로 바꾸는 코드가 없는 것이 원인이다.</li>
+    <li><b>긴 값은 500이 나온다. [확인]</b> 300자인 사용자 이름, 300자인 이메일. DB의 열이 <code>varchar(255)</code>다. 길이의 규칙이 <code>domain</code>에 없다. 작업 3의 리뷰 메모 2에서 추정한 것이다.</li>
+    <li><b>보이지 않는 사용자 이름으로 가입된다. [확인]</b> <code>{"username":" ", …}</code> → 201. 작업 3의 리뷰 메모 1이 이제 HTTP로 닿는다.</li>
+    <li><b>JSON의 숫자가 글자가 된다. [확인]</b> <code>{"username":123, …}</code> → 201, 사용자 이름은 <code>"123"</code>이다. Jackson의 기본 동작이다. 좋은 쪽의 확인도 있다: 모르는 필드(<code>id</code>, <code>passwordHash</code>)를 보내도 무시한다. 요청으로 id나 해시를 정할 수 없다.</li>
+    <li><b>R1의 보장이 약해졌다. [읽음]</b> <code>Member</code>의 필드가 <code>final</code>이 아니고, <code>protected</code> 기본 생성자가 있다. 같은 패키지나 하위 클래스에서 빈 회원을 만들 수 있다. 또 하나: Hibernate는 DB에서 읽을 때 값 객체의 생성자를 부른다. 나중에 규칙을 강화하면(예: 메모 3을 막으면), 옛 규칙으로 저장된 회원을 읽을 때 예외가 난다 [추정].</li>
+    <li><b>도메인의 예외 메시지가 API의 일부가 됐다. [읽음]</b> <code>value()</code>는 <code>IllegalArgumentException</code>의 메시지를 그대로 <code>errors</code>에 넣는다. 응답에 나간다. <code>Email</code>의 메시지를 고치면 API의 응답이 바뀐다. 또 하나: 값 객체의 생성자 안에서 다른 이유로 <code>IllegalArgumentException</code>이 나도 "값의 오류"(400)가 된다.</li>
+    <li><b>수용 테스트가 DB의 이름을 안다. [읽음]</b> <code>storedPasswordHash()</code>의 SQL에 테이블(<code>member</code>)과 열(<code>password_hash</code>)의 이름이 있다. 매핑을 바꾸면 테스트가 깨진다. 그리고 unique 제약을 확인하는 테스트는 없다. 사용자 이름의 대소문자 구분(R7, 가정 2)은 DB의 설정에 달려 있다. H2는 구분한다. 구분하지 않는 DB로 바꾸면 <code>Jake</code>의 가입은 메모 1과 같은 500이 된다 [추정].</li>
+    <li><b>AI가 승인된 문서 4개를 고쳤다. [확인]</b> 가장 큰 것은 Domain 01이다. 모델에 값 객체가 하나 늘었다 (<code>Password</code>). R4의 "지키는 곳"이 바뀌었다. 이 결정들을 승인하는가?</li>
+  </ol>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 규칙 하나: 다 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="a">
+      <p class="q-text"><code>InvalidValuesException</code>은 유스케이스가 던진다. 왜 <code>application.service</code>가 아니고 <code>application.port.in</code>에 있는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">웹 어댑터가 이 예외를 잡아서 400으로 바꿔야 한다. 규칙 5는 웹 어댑터에게 <code>port.in</code>만 허락한다.</button>
+        <button type="button" data-opt="b">예외는 도메인의 규칙이 아니므로 <code>domain</code>에 둘 수 없다. 남은 곳이 <code>port.in</code>이다.</button>
+        <button type="button" data-opt="c">Spring의 <code>@RestControllerAdvice</code>는 <code>port.in</code> 패키지의 예외만 처리한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>들어오는 포트는 인터페이스 하나가 아니다. 웹 어댑터가 유스케이스와 이야기하는 데 필요한 모든 것이다: 인터페이스, 명령, 예외. 예외를 application.service에 두면 ApiExceptionHandler가 규칙 5를 어긴다. Spring은 예외의 패키지를 보지 않는다.</p>
+        <a href="#step3">다시 읽기: 단계 3</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">회원 <code>jake</code> / <code>jake@example.com</code>이 이미 있다. 요청: <code>username = "jake"</code>, <code>email = "jake@example.com"</code>, <code>password = "short"</code>. 응답은?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">409. <code>errors</code>에 <code>email</code>이 있다. 중복이 더 심각한 오류다.</button>
+        <button type="button" data-opt="b">400. <code>errors</code>에 <code>username</code>, <code>email</code>, <code>password</code>가 모두 있다. 문제를 모두 모아서 알려 준다.</button>
+        <button type="button" data-opt="c">400. <code>errors</code>에 <code>password</code>만 있다. 값이 틀리면 저장소에 묻지 않는다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>register()는 값 객체 3개를 먼저 만든다. Password가 실패하고, 유스케이스는 거기서 멈춘다. 중복의 확인은 실행되지 않는다. "모두 모은다"는 값의 오류에만 해당한다. 사용자 이름과 이메일은 형식이 올바르므로 errors에 없다.</p>
+        <a href="#explore">다시 해 보기: 3. 직접 넣어 보기</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">비밀번호가 <code>"가"</code> 25개다. 가입의 결과는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">통과한다. 25자는 8자 이상이고 72자 이하다.</button>
+        <button type="button" data-opt="b">거부된다. 위쪽의 한계는 글자가 아니고 바이트다. 한글 25자는 UTF-8로 75바이트다.</button>
+        <button type="button" data-opt="c">거부된다. 비밀번호에는 ASCII의 글자만 쓸 수 있다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>R4의 두 한계는 단위가 다르다. 아래쪽은 8자(코드 포인트), 위쪽은 72바이트다. 한글 한 자는 UTF-8로 3바이트다. 24자가 한계다. 문자 종류의 조건은 없다. 72는 BCrypt에서 온 숫자다.</p>
+        <a href="#step2">다시 읽기: 단계 2</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text"><code>UseCaseConfig</code>를 지웠다. 다른 코드는 그대로다. 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">달라지는 것이 없다. 컴포넌트 스캔이 <code>RegisterMemberService</code>를 찾아서 빈으로 만든다.</button>
+        <button type="button" data-opt="b">애플리케이션이 뜨지 않는다. <code>MemberController</code>에 줄 <code>RegisterMemberUseCase</code> 빈이 없다.</button>
+        <button type="button" data-opt="c">애플리케이션은 뜬다. 아키텍처 테스트만 실패한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>RegisterMemberService에는 @Service가 없다. application이 Spring을 모르게 하려고 일부러 뺐다. 그래서 컴포넌트 스캔이 찾지 못한다. UseCaseConfig가 유일하게 이 클래스를 만드는 곳이다. 지우면 수용 테스트와 contextLoads가 모두 실패한다. 유스케이스의 단위 테스트 9개는 통과한다. Spring을 쓰지 않기 때문이다.</p>
+        <a href="#step5">다시 읽기: 단계 5</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">같은 이메일의 가입 요청 2개가 거의 동시에 온다. 가능한 결과는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">하나는 201, 다른 하나는 항상 409다. 유스케이스가 저장의 전에 중복을 확인한다.</button>
+        <button type="button" data-opt="b">둘 다 201이 될 수 있다. 회원이 2명 생긴다.</button>
+        <button type="button" data-opt="c">하나는 201이다. 다른 하나는 409 또는 500이다. 회원은 1명만 생긴다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>두 요청이 모두 existsByEmail에서 "없다"를 받을 수 있다. 그 뒤에 둘 다 저장한다. DB의 unique 제약이 두 번째를 막는다. 그래서 회원은 1명이다 (R6은 지켜진다). 그러나 제약의 위반을 409로 바꾸는 코드가 없어서 응답은 500이다. 유스케이스의 확인은 "친절한 응답"을 위한 것이고, 제약이 "보장"이다.</p>
+        <a href="#review">다시 읽기: 6. 리뷰 메모 (1번)</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+<script>
+/* 위젯. RegisterMemberService.register()와 ApiExceptionHandler, 값 객체 4개의 생성자를 옮겼다. */
+/* LOGIC-START */
+// java.lang.Character.isWhitespace(int)
+function isJavaWhitespace(cp){
+  if((cp>=0x09&&cp<=0x0D)||(cp>=0x1C&&cp<=0x1F)) return true;
+  if(cp===0x00A0||cp===0x2007||cp===0x202F) return false;
+  return cp===0x20||cp===0x1680||(cp>=0x2000&&cp<=0x200A)||cp===0x2028||cp===0x2029||cp===0x205F||cp===0x3000;
+}
+function isBlank(s){ return Array.from(s).every(function(c){return isJavaWhitespace(c.codePointAt(0));}); }
+function strip(s){
+  var a=Array.from(s), i=0, j=a.length;
+  while(i<j&&isJavaWhitespace(a[i].codePointAt(0))) i++;
+  while(j>i&&isJavaWhitespace(a[j-1].codePointAt(0))) j--;
+  return a.slice(i,j).join('');
+}
+// String.getBytes(UTF_8).length. 짝이 없는 서로게이트는 Java에서 '?' 1바이트다.
+function utf8Length(s){
+  var n=0;
+  Array.from(s).forEach(function(c){
+    var cp=c.codePointAt(0);
+    n+= cp<0x80?1 : cp<0x800?2 : cp<0x10000?((cp>=0xD800&&cp<=0xDFFF)?1:3) : 4;
+  });
+  return n;
+}
+var EMAIL_FORMAT=/^[^@ \t\n\x0B\f\r]+@[^@ \t\n\x0B\f\r]+\.[^@ \t\n\x0B\f\r]+$/;
+function newEmail(value){
+  if(value===null||!EMAIL_FORMAT.test(value)) throw new Error("이메일의 형식이 올바르지 않다");
+  return value.toLowerCase();
+}
+function newUsername(value){
+  if(value===null||isBlank(value)) throw new Error("사용자 이름이 비어 있다");
+  return strip(value);
+}
+var MIN_CHARACTERS=8, MAX_BYTES=72;
+function newPassword(value){
+  if(value===null||Array.from(value).length<MIN_CHARACTERS||utf8Length(value)>MAX_BYTES)
+    throw new Error("비밀번호는 8자 이상이고 72바이트 이하여야 한다");
+  return value;
+}
+// RegisterMemberService.register() + ApiExceptionHandler. members는 저장소다. 바꾸지 않는다.
+function register(command, members){
+  var errors={}, values={};
+  function value(name, constructor){
+    try{ var v=constructor(); values[name]={ok:true,value:v}; return v; }
+    catch(e){ errors[name]=e.message; values[name]={ok:false,message:e.message}; return null; }
+  }
+  var username=value("username",function(){return newUsername(command.username);});
+  var email=value("email",function(){return newEmail(command.email);});
+  var password=value("password",function(){return newPassword(command.password);});
+  if(Object.keys(errors).length>0)
+    return {stage:'values', values:values, status:400,
+      body:{detail:"값이 올바르지 않다",instance:"/api/members",status:400,title:"Bad Request",errors:errors}};
+  if(members.some(function(m){return m.email===email;}))
+    return {stage:'email', values:values, status:409,
+      body:{detail:"이미 있는 이메일이다",instance:"/api/members",status:409,title:"Conflict",errors:{email:"이미 있는 이메일이다"}}};
+  if(members.some(function(m){return m.username===username;}))
+    return {stage:'username', values:values, status:409,
+      body:{detail:"이미 있는 사용자 이름이다",instance:"/api/members",status:409,title:"Conflict",errors:{username:"이미 있는 사용자 이름이다"}}};
+  return {stage:'saved', values:values, status:201, body:{username:username,email:email},
+    member:{username:username,email:email}};
+}
+/* LOGIC-END */
+(function(){
+  var fu=document.getElementById('f-username'); if(!fu) return;
+  var fe=document.getElementById('f-email'), fp=document.getElementById('f-password');
+  var members;
+  function visible(s){
+    return s.replace(/[   ​﻿　\u0000-\u0009\u000B-\u001F]/g,function(c){
+      return '\\u'+('000'+c.charCodeAt(0).toString(16).toUpperCase()).slice(-4);});
+  }
+  function cell(id,cls,text){ var e=document.getElementById(id); e.className=cls; e.textContent=text; }
+  function current(){ return register({username:fu.value,email:fe.value,password:fp.value},members); }
+  function render(){
+    var r=current(), order=['values','email','username','saved'], at=order.indexOf(r.stage);
+    var lines=['username','email','password'].map(function(n){
+      var v=r.values[n];
+      return n+': '+(v.ok ? '✓ '+(n==='password'?'(가림)':visible(JSON.stringify(v.value))) : '✕ '+v.message);
+    });
+    cell('s-values', at===0?'no':'yes', (at===0?'여기서 멈춘다. ':'통과. ')+lines.join(' / '));
+    cell('s-email', at<1?'skip':at===1?'no':'yes', at<1?'실행하지 않는다':at===1?'있다. 여기서 멈춘다':'없다. 통과');
+    cell('s-username', at<2?'skip':at===2?'no':'yes', at<2?'실행하지 않는다':at===2?'있다. 여기서 멈춘다':'없다. 통과');
+    cell('s-save', at<3?'skip':'yes', at<3?'실행하지 않는다':'해시: $2a$10$… (BCrypt). 회원을 저장한다');
+    document.getElementById('w-response').textContent='HTTP '+r.status+'   '+(r.status===201?'application/json':'application/problem+json')
+      +'\n'+visible(JSON.stringify(r.body,null,2));
+    var ul=document.getElementById('w-members'); ul.textContent='';
+    members.forEach(function(m){ var li=document.createElement('li'); li.textContent=visible(JSON.stringify(m.username))+'  '+m.email; ul.appendChild(li); });
+  }
+  function reset(){ members=[{username:'jake',email:'jake@example.com'}]; render(); }
+  var long24='가'.repeat(24), long25='가'.repeat(25), ok='correct-horse-battery';
+  var samples=[
+    ['올바른 값','finn','finn@example.com',ok],
+    ['셋 다 틀림',' ','jake@','short'],
+    ['이미 있는 값 + 짧은 비밀번호','jake','jake@example.com','short'],
+    ['같은 이메일 (대문자)','finn','JAKE@Example.com',ok],
+    ['같은 사용자 이름','jake','finn@example.com',ok],
+    ['대문자만 다른 사용자 이름','Jake','finn@example.com',ok],
+    ['한글 24자인 비밀번호','finn','finn@example.com',long24],
+    ['한글 25자인 비밀번호','finn','finn@example.com',long25],
+    ['NBSP인 사용자 이름',' ','nbsp@example.com',ok]
+  ];
+  var box=document.getElementById('w-samples');
+  samples.forEach(function(s){
+    var b=document.createElement('button'); b.type='button'; b.textContent=s[0];
+    b.addEventListener('click',function(){ fu.value=s[1]; fe.value=s[2]; fp.value=s[3]; render(); });
+    box.appendChild(b);
+  });
+  [fu,fe,fp].forEach(function(f){ f.addEventListener('input',render); });
+  document.getElementById('w-send').addEventListener('click',function(){
+    var r=current(); if(r.member) members.push(r.member); render();
+  });
+  document.getElementById('w-reset').addEventListener('click',reset);
+  fu.value='jake'; fe.value='jake@example.com'; fp.value='short';
+  reset();
+})();
+</script>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
