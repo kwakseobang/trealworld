@@ -55,6 +55,32 @@ class MemberPersistenceAdapterTests {
 		assertThat(members.existsByUsername(new Username("Jake-" + id))).isFalse();
 	}
 
+	/** R8: 로그인은 이메일로 회원을 찾는다. */
+	@Test
+	void r8_a_saved_member_is_found_by_email() {
+		Member saved = members.save(member("jake-" + id, "jake-" + id + "@example.com"));
+
+		assertThat(members.findByEmail(new Email("jake-" + id + "@example.com")))
+				.hasValueSatisfying(found -> {
+					assertThat(found.getId()).isEqualTo(saved.getId());
+					assertThat(found.getUsername()).isEqualTo(new Username("jake-" + id));
+					assertThat(found.getPasswordHash()).isEqualTo(new PasswordHash("hash"));
+				});
+	}
+
+	/** 이메일(R2)은 소문자로 바뀐다. 그래서 대소문자가 다른 이메일로도 찾는다. (AC-2.5) */
+	@Test
+	void r8_a_saved_member_is_found_by_an_email_in_another_case() {
+		members.save(member("jake-" + id, "Jake-" + id + "@Example.com"));
+
+		assertThat(members.findByEmail(new Email("JAKE-" + id + "@example.COM"))).isPresent();
+	}
+
+	@Test
+	void r8_an_email_that_is_not_saved_is_not_found() {
+		assertThat(members.findByEmail(new Email("nobody-" + id + "@example.com"))).isEmpty();
+	}
+
 	private static Member member(String username, String email) {
 		return Member.register(new Username(username), new Email(email), new PasswordHash("hash"));
 	}

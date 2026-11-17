@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -173,6 +174,11 @@ class RegisterMemberServiceTests {
 		}
 
 		@Override
+		public Optional<Member> findByEmail(Email email) {
+			return saved.stream().filter(member -> member.getEmail().equals(email)).findFirst();
+		}
+
+		@Override
 		public boolean existsByEmail(Email email) {
 			return saved.stream().anyMatch(member -> member.getEmail().equals(email));
 		}
@@ -192,6 +198,11 @@ class RegisterMemberServiceTests {
 		public PasswordHash hash(Password password) {
 			hashed.add(password.value());
 			return new PasswordHash("hash-of-" + password.value().length());
+		}
+
+		@Override
+		public boolean matches(Password password, PasswordHash hash) {
+			return hash(password).equals(hash);
 		}
 
 	}

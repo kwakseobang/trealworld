@@ -1,5 +1,7 @@
 package trealworld.application.port.out;
 
+import java.util.Optional;
+
 import trealworld.domain.Email;
 import trealworld.domain.Member;
 import trealworld.domain.Username;
@@ -14,6 +16,8 @@ public interface MemberRepository {
 	 * existsByEmail과 existsByUsername이 "없다"고 답한 뒤에도 일어난다. 그 사이에 다른 가입이 저장했을 때다
 	 */
 	Member save(Member member);
+
+	Optional<Member> findByEmail(Email email);
 
 	boolean existsByEmail(Email email);
 

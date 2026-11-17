@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import trealworld.application.port.in.DuplicateMemberException;
+import trealworld.application.port.in.InvalidCredentialsException;
 import trealworld.application.port.in.InvalidValuesException;
 
 /**
@@ -32,6 +33,12 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
 		problem.setProperty("errors", Map.of(exception.getField(), exception.getMessage()));
 		return problem;
+	}
+
+	/** 로그인 실패 → 401. 이유(없는 이메일, 틀린 비밀번호)를 구분하지 않는다. (R9) */
+	@ExceptionHandler(InvalidCredentialsException.class)
+	ProblemDetail invalidCredentials(InvalidCredentialsException exception) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
 	}
 
 }

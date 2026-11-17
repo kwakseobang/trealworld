@@ -9,7 +9,7 @@ import trealworld.domain.Password;
 import trealworld.domain.PasswordHash;
 
 /**
- * 비밀번호를 BCrypt로 해시한다. (ADR-0003)
+ * 비밀번호를 BCrypt로 해시하고, 해시와 맞는지 확인한다. (ADR-0003)
  */
 @Component
 class BCryptPasswordHasher implements PasswordHasher {
@@ -19,6 +19,11 @@ class BCryptPasswordHasher implements PasswordHasher {
 	@Override
 	public PasswordHash hash(Password password) {
 		return new PasswordHash(encoder.encode(password.value()));
+	}
+
+	@Override
+	public boolean matches(Password password, PasswordHash hash) {
+		return encoder.matches(password.value(), hash.value());
 	}
 
 }

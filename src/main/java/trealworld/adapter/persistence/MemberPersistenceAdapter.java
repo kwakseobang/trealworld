@@ -1,5 +1,7 @@
 package trealworld.adapter.persistence;
 
+import java.util.Optional;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
@@ -32,6 +34,11 @@ class MemberPersistenceAdapter implements MemberRepository {
 		catch (DataIntegrityViolationException exception) {
 			throw new MemberNotUniqueException(exception);
 		}
+	}
+
+	@Override
+	public Optional<Member> findByEmail(Email email) {
+		return jpaRepository.findByEmailValue(email.value());
 	}
 
 	@Override
