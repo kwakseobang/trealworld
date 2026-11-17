@@ -16,12 +16,8 @@ import java.util.UUID;
 
 import javax.sql.DataSource;
 
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
-import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +45,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureRestTestClient
 class GetMemberAcceptanceTests {
 
-	static final String SECRET = "acceptance-test-secret-0123456789abcdef";
+	static final String SECRET = TestTokens.SECRET;
 	private static final String PASSWORD = "correct-horse-battery";
 	private static final JsonMapper json = new JsonMapper();
 
@@ -208,10 +204,13 @@ class GetMemberAcceptanceTests {
 	void ac3_5_a_valid_token_with_a_subject_that_is_not_a_member_is_rejected() {
 		Instant expiry = clock.instant().plus(Duration.ofHours(1));
 
-		me(signed(SECRET, "999999999", expiry)).expectStatus().isUnauthorized();
-		me(signed(SECRET, "not-a-number", expiry)).expectStatus().isUnauthorized();
-		me(signed(SECRET, "-1", expiry)).expectStatus().isUnauthorized();
-		me(signed(SECRET, null, expiry)).expectStatus().isUnauthorized();
+		String noToken = bodyOf(client.get().uri("/api/members/me").exchange().expectStatus().isUnauthorized());
+
+		// 상태만 보지 않는다. 본문의 instance가 /error이면 서버의 오류가 401에 숨은 것이다
+		for (String subject : new String[] { "999999999", "not-a-number", "-1", "7.0", null }) {
+			assertThat(bodyOf(me(signed(SECRET, subject, expiry)).expectStatus().isUnauthorized()))
+					.as("sub = %s", subject).isEqualTo(noToken).contains("\"instance\":\"/api/members/me\"");
+		}
 	}
 
 	/** 거부의 이유(없다, 위조, 만료, 회원이 없다)를 본문으로 구분하지 못한다. */
@@ -285,17 +284,8 @@ class GetMemberAcceptanceTests {
 		}).get("sub").toString();
 	}
 
-	/** 테스트가 직접 만드는 토큰. */
 	private static String signed(String secret, String subject, Instant expiry) {
-		try {
-			SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256),
-					new JWTClaimsSet.Builder().subject(subject).expirationTime(Date.from(expiry)).build());
-			jwt.sign(new MACSigner(secret.getBytes(StandardCharsets.UTF_8)));
-			return jwt.serialize();
-		}
-		catch (Exception exception) {
-			throw new IllegalStateException(exception);
-		}
+		return TestTokens.signed(secret, subject, expiry);
 	}
 
 	private static String bodyOf(RestTestClient.ResponseSpec response) {
