@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오류가 401로 보이던 길</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+
+/* 이 문서에서 더한 것: 표, 그림, 위젯. 색은 위의 토큰만 쓴다. */
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+table.t th,table.t td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg);font-weight:600}
+table.t td.no{color:var(--warn);font-weight:700}
+table.readout{font:13px/1.6 var(--mono)} table.readout th{white-space:nowrap;width:1%}
+.readout td.yes{color:var(--add-fg)} .readout td.no{color:var(--warn);font-weight:700} .readout td.skip{color:var(--muted);font-style:italic}
+pre.diff.wrap span{white-space:pre-wrap;overflow-wrap:anywhere;padding-left:2.4em;text-indent:-1.3em}
+.d-box{fill:var(--card);stroke:var(--line)} .d-gate{fill:var(--accent-soft);stroke:var(--accent)}
+.d-member{fill:var(--code-bg);stroke:var(--fg);stroke-width:1.5}
+.d-txt{fill:var(--fg);font:12px var(--mono)} .d-sub{fill:var(--muted);font:11.5px var(--sans)}
+.d-lbl{fill:var(--fg);font:700 12.5px var(--sans)}
+.d-arrow{stroke:var(--muted);stroke-width:1.5} .d-head{fill:var(--muted)}
+.d-arroww{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 3} .d-headw{fill:var(--warn)} .d-warn{fill:var(--warn);font:700 12.5px var(--sans)}
+.w-grid label{grid-template-columns:3em 1fr;font-family:var(--sans)}
+.w-grid select{min-width:0;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.w-grid label>span{display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:14px}
+table.readout th{white-space:normal;width:34%}
+.w-pre{font:13px/1.5 var(--mono)}
+.file-role b,figcaption code{overflow-wrap:anywhere;word-break:break-all}
+main li code,main p code,main td code{overflow-wrap:anywhere;word-break:break-all}
+table.t{table-layout:auto} table.t td,table.t th{overflow-wrap:anywhere}
+.w-grid{display:grid;gap:8px}
+.w-grid label{font:600 13px var(--sans);display:grid;grid-template-columns:3em 1fr;gap:8px;align-items:center}
+.w-grid input{min-width:0;font:14px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.w-samples{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.w-samples button{font:12px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+.w-samples button:hover{border-color:var(--accent)}
+.w-cap{font:600 13px var(--sans);color:var(--muted);margin:14px 0 4px}
+.w-pre{font:14px/1.6 var(--sans);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">작업 6의 리뷰 메모 1 · 일지의 스텝 52</p>
+  <h1>서버의 오류가 "토큰이 틀리다"로 보이던 길을 막는다</h1>
+  <div class="meta"><span>작업 트리 (bed13ab의 뒤, 커밋 전)</span><span>9 files</span><span>+411 / −21</span></div>
+  <div class="assumption">독자: 작업 6(내 정보 조회)의 구조를 아는 사람. Spring Security의 필터 체인이 컨트롤러의 앞에 있다는 것을 안다. 서블릿의 "오류로 넘기기"(ERROR dispatch)는 모른다고 본다. 작은 변경이다. 코드는 2곳이고 나머지는 테스트다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>증상: 유효한 토큰이 거부된다</h3>
+  <p>작업 6이 끝난 서버에 요청 둘을 보낸다. 토큰은 같다. 유효하다.</p>
+<pre class="diff"><span class="ctx">GET /api/members/me          Authorization: Bearer (유효한 토큰)</span><span class="add">200  {"username":"jake","email":"jake@example.com"}</span><span class="ctx"></span><span class="ctx">GET /api/members/me;x=1      Authorization: Bearer (같은 토큰)</span><span class="del">401  {"detail":"액세스 토큰이 없거나 유효하지 않다","instance":"/error", …}</span></pre>
+  <p>둘째 요청은 경로가 이상하다 (<code>;x=1</code>). 틀린 것은 경로다. 그런데 서버는 "토큰이 틀리다"고 답한다. 본문의 <code>instance</code>도 이상하다. 요청한 경로가 아니고 <code>/error</code>다.</p>
+
+  <h3>서버가 요청을 스스로 넘기는 길이 있다</h3>
+  <p>서블릿 컨테이너(Tomcat)에는 요청이 들어오는 길이 여럿 있다. 이 문서에는 둘이 나온다.</p>
+  <table class="t">
+    <tr><th>종류</th><th>누가 시작하는가</th><th>언제</th></tr>
+    <tr><td><b>요청</b> (REQUEST)</td><td>클라이언트</td><td>HTTP 요청이 왔을 때</td></tr>
+    <tr><td><b>오류로 넘기기</b> (ERROR)</td><td>서버 자신</td><td>처리하는 중에 오류가 났을 때. 서버가 같은 요청을 오류의 화면(<code>/error</code>)으로 다시 보낸다</td></tr>
+  </table>
+  <p>"오류가 났을 때"는 두 가지다. 코드가 예외를 던지고 아무도 잡지 않았다. 또는 코드가 <code>response.sendError(400)</code>처럼 "이 상태로 끝내 달라"고 했다. 두 경우에 서버는 상태 코드와 원래의 경로를 요청에 적어 두고, <code>/error</code>로 넘긴다. Spring Boot는 그 경로에 기본 오류 화면을 둔다.</p>
+  <p>중요한 점: <b>넘긴 요청도 필터 체인을 다시 지난다.</b> 작업 6의 설정은 "가입과 로그인이 아니면 인증이 필요하다"다. 넘긴 요청은 가입도 로그인도 아니다.</p>
+
+  <h3>이 프로젝트에서 <code>/error</code>로 넘어가는 경우 둘</h3>
+  <table class="t">
+    <tr><th>경우</th><th>누가 오류를 내는가</th><th>맞는 상태</th><th>지금 일어나는가</th></tr>
+    <tr><td>경로에 <code>;</code>, <code>//</code>, <code>%2e</code>가 있다</td><td>Spring Security의 방화벽. 필터 체인의 맨 앞에서 거부하고 <code>sendError(400)</code>을 부른다</td><td>400</td><td>일어난다</td></tr>
+    <tr><td>필터의 안에서 예외가 난다</td><td>보안 어댑터의 코드. 예: 회원을 확인할 때 DB가 실패한다</td><td>500</td><td>지금의 코드로는 만들지 못한다. 결함을 넣어서 확인했다</td></tr>
+  </table>
+  <p>컨트롤러의 안에서 난 오류는 여기에 없다. <code>ApiExceptionHandler</code>가 잡는다. <code>/error</code>로 넘어가지 않는다.</p>
+
+  <details>
+    <summary>어떻게 찾았는가</summary>
+    <ol>
+      <li>작업 6에서 결함 17가지를 넣는 확인을 했다. 하나가 이상했다: "숫자가 아닌 <code>sub</code>를 그대로 바꾼다"를 단위 테스트는 잡았고 수용 테스트는 놓쳤다. 수용 테스트에 그 경우가 있는데도 통과했다.</li>
+      <li>작업 6의 설명 문서를 쓰면서 이유를 확인했다. 그 결함을 넣은 서버를 따로 빌드했다. 서버의 안에서 <code>NumberFormatException</code>이 났다. 응답은 401이었다. 수용 테스트는 401을 기대했다. 그래서 통과했다.</li>
+      <li>고치기 전에 "<code>/error</code>로 넘어가는 다른 경우가 있는가"를 봤다. 방화벽의 400이 있었다. 이것은 결함을 넣지 않아도 지금 일어난다.</li>
+    </ol>
+  </details>
+</section>
+
+<section id="idea">
+  <h2>2. 한 문장으로</h2>
+  <p class="intuition">클라이언트가 오는 길과 서버가 스스로 넘기는 길을 구분한다. 넘기는 길은 열어 두고, 그 끝에서 원래의 상태와 원래의 경로로 답한다.</p>
+  <p>인증은 "누가 요청했는가"를 묻는 일이다. 서버가 스스로 넘긴 요청에는 그 질문이 맞지 않는다. 넘긴 사람은 서버다. 그 요청에 인증을 요구하면 답은 항상 "없다"다. 그래서 원래의 오류가 무엇이든 401이 된다. 400도 500도 사라진다.</p>
+  <p>고치는 것은 둘이다. 첫째, 넘기는 길에는 인증을 요구하지 않는다. 길의 종류로 구분한다. 경로(<code>/error</code>)로 구분하지 않는다. 그래서 클라이언트가 <code>/error</code>를 직접 부르면 여전히 인증이 필요하다. 둘째, 길의 끝에 이 프로젝트의 오류 화면을 둔다. 서버가 적어 둔 상태 코드와 원래의 경로를 읽어서 Problem Details를 만든다.</p>
+  <figure>
+    <svg viewBox="0 0 760 250" role="img" aria-label="오류로 넘기는 길의 전과 후">
+      <defs>
+        <marker id="ah7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-head"/></marker>
+        <marker id="ah7w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-headw"/></marker>
+      </defs>
+      <rect x="6" y="88" width="100" height="56" rx="8" class="d-box"/>
+      <text x="56" y="112" text-anchor="middle" class="d-lbl">요청</text>
+      <text x="56" y="130" text-anchor="middle" class="d-sub">클라이언트</text>
+      <rect x="140" y="88" width="130" height="56" rx="8" class="d-gate"/>
+      <text x="205" y="112" text-anchor="middle" class="d-lbl">필터 체인</text>
+      <text x="205" y="130" text-anchor="middle" class="d-sub">오류가 난다 (400, 500)</text>
+      <rect x="304" y="88" width="130" height="56" rx="8" class="d-member"/>
+      <text x="369" y="112" text-anchor="middle" class="d-lbl">서버가 넘긴다</text>
+      <text x="369" y="130" text-anchor="middle" class="d-sub">/error, 상태와 경로를 적는다</text>
+
+      <text x="470" y="22" class="d-lbl">전</text>
+      <rect x="470" y="30" width="130" height="56" rx="8" class="d-box"/>
+      <text x="535" y="54" text-anchor="middle" class="d-lbl">인가</text>
+      <text x="535" y="72" text-anchor="middle" class="d-sub">인증된 사람이 없다</text>
+      <rect x="634" y="30" width="120" height="56" rx="8" class="d-box"/>
+      <text x="694" y="54" text-anchor="middle" class="d-warn">401</text>
+      <text x="694" y="72" text-anchor="middle" class="d-sub">instance: /error</text>
+
+      <text x="470" y="158" class="d-lbl">후</text>
+      <rect x="470" y="166" width="130" height="56" rx="8" class="d-box"/>
+      <text x="535" y="190" text-anchor="middle" class="d-lbl">인가</text>
+      <text x="535" y="208" text-anchor="middle" class="d-sub">넘긴 요청은 허용한다</text>
+      <rect x="634" y="166" width="120" height="56" rx="8" class="d-box"/>
+      <text x="694" y="190" text-anchor="middle" class="d-lbl">400 / 500</text>
+      <text x="694" y="208" text-anchor="middle" class="d-sub">instance: 원래의 경로</text>
+
+      <line x1="106" y1="116" x2="138" y2="116" class="d-arrow" marker-end="url(#ah7)"/>
+      <line x1="270" y1="116" x2="302" y2="116" class="d-arrow" marker-end="url(#ah7)"/>
+      <line x1="434" y1="104" x2="468" y2="64" class="d-arroww" marker-end="url(#ah7w)"/>
+      <line x1="600" y1="58" x2="632" y2="58" class="d-arroww" marker-end="url(#ah7w)"/>
+      <line x1="434" y1="128" x2="468" y2="190" class="d-arrow" marker-end="url(#ah7)"/>
+      <line x1="600" y1="194" x2="632" y2="194" class="d-arrow" marker-end="url(#ah7)"/>
+      <text x="380" y="244" text-anchor="middle" class="d-sub">전과 후의 차이는 "인가"의 한 칸이다. 후의 마지막 칸이 새 클래스다 (오류의 화면).</text>
+    </svg>
+    <figcaption>전에는 원래의 오류가 무엇이든 401로 끝났다.</figcaption>
+  </figure>
+</section>
+
+<section id="explore">
+  <h2>3. 직접 넣어 보기</h2>
+  <p>같은 요청을 고치기 전의 서버와 고친 뒤의 서버에 보낸다. 회원은 <code>jake</code>(식별자 1)다. 먼저 예측한다: 경로를 <code>/error</code>로, 토큰을 "없다"로 고른다. 고친 뒤에 이 요청은 통과하는가.</p>
+  <div class="widget">
+    <div class="live">
+      <div class="w-grid">
+        <label>경로 <select id="f-path"></select></label>
+        <label>토큰 <select id="f-token">
+          <option value="valid">유효하다</option><option value="none">없다</option><option value="expired">만료됐다</option>
+          <option value="badsub">서명은 맞다. sub가 "jake"다</option></select></label>
+        <label>결함 <span><input id="f-fault" type="checkbox"> <span>변환기에서 숫자의 검사를 뺀다 (sub가 "jake"이면 필터의 안에서 예외가 난다)</span></span></label>
+      </div>
+      <p class="w-cap">전 (bed13ab)</p>
+      <table class="t readout" id="w-old"></table>
+      <pre id="w-old-r" class="w-pre"></pre>
+      <p class="w-cap">후 (작업 트리)</p>
+      <table class="t readout" id="w-new"></table>
+      <pre id="w-new-r" class="w-pre"></pre>
+      <p id="w-verdict" class="w-cap"></p>
+    </div>
+    <div class="static-fallback">
+      <p>실제 서버의 응답. 전과 후가 다른 요청만 적었다. 나머지는 같다.</p>
+      <table class="t readout">
+        <tr><th>요청</th><th>전</th><th>후</th></tr>
+        <tr><td>GET /api/members/me;x=1<br>유효한 토큰</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>400  {&quot;detail&quot;: &quot;요청을 받아들일 수 없다&quot;, &quot;instance&quot;: &quot;/api/members/me;x=1&quot;}</td></tr>
+        <tr><td>GET /api/members/me;x=1<br>토큰이 없다</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>400  {&quot;detail&quot;: &quot;요청을 받아들일 수 없다&quot;, &quot;instance&quot;: &quot;/api/members/me;x=1&quot;}</td></tr>
+        <tr><td>GET /api//members/me<br>유효한 토큰</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>400  {&quot;detail&quot;: &quot;요청을 받아들일 수 없다&quot;, &quot;instance&quot;: &quot;/api//members/me&quot;}</td></tr>
+        <tr><td>GET /api/members/%2e%2e/me<br>유효한 토큰</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>400  {&quot;detail&quot;: &quot;요청을 받아들일 수 없다&quot;, &quot;instance&quot;: &quot;/api/members/%2e%2e/me&quot;}</td></tr>
+        <tr><td>GET /error<br>유효한 토큰</td><td>500  {&quot;status&quot;: 999, &quot;error&quot;: &quot;None&quot;}</td><td>404  {&quot;detail&quot;: &quot;요청한 자원이 없다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td></tr>
+        <tr><td>GET /api/members/me;x=1<br>만료된 토큰</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>400  {&quot;detail&quot;: &quot;요청을 받아들일 수 없다&quot;, &quot;instance&quot;: &quot;/api/members/me;x=1&quot;}</td></tr>
+        <tr><td>GET /api/members/me<br>sub가 "jake"인 토큰<br>결함을 넣은 서버</td><td>401  {&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;, &quot;instance&quot;: &quot;/error&quot;}</td><td>500  {&quot;detail&quot;: &quot;서버에서 오류가 났다&quot;, &quot;instance&quot;: &quot;/api/members/me&quot;}</td></tr>
+      </table>
+    </div>
+    <div class="mirrors">같은 로직: Spring Security의 방화벽과 필터의 순서, <code>SecurityConfig</code>의 인가의 규칙(전과 후), <code>ProblemDetailsErrorController</code>, Spring Boot의 기본 오류 화면(전). 서버 4개를 띄웠다: 전, 후, 그리고 각각에 결함을 넣은 것. 서버마다 요청 12개를 보냈다. 상태, 본문, <code>WWW-Authenticate</code>를 이 위젯의 결과 48개와 대조했다. 방화벽이 거부하는 경로의 규칙은 여기에 있는 세 가지(<code>;</code>, <code>//</code>, <code>%2e</code>)만 옮겼다. 실제 방화벽은 더 많이 거부한다.</div>
+  </div>
+  <p>알아챌 것 4개:</p>
+  <ul>
+    <li><code>/error</code> + 토큰이 없다: 전과 후가 같다. 401이다. 클라이언트가 직접 부르는 것은 "요청"이다. "넘기기"가 아니다.</li>
+    <li>이상한 경로 + 만료된 토큰: 후에는 400이다. 방화벽이 Bearer 필터보다 앞에 있다. 토큰을 보기 전에 끝난다.</li>
+    <li>결함을 켜고 <code>sub</code>를 <code>"jake"</code>로 고른다. 전: 401. 후: 500. 결함을 끄면 전과 후가 모두 401이고 <code>instance</code>가 요청의 경로다. 그것이 맞는 401이다.</li>
+    <li>전의 401 둘은 상태도 글도 같다. 다른 것은 <code>instance</code>뿐이다: <code>/api/members/me</code>(맞는 거부)와 <code>/error</code>(숨은 오류).</li>
+  </ul>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 변경을 순서대로 읽기</h2>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 실패하는 테스트를 쓴다</h3>
+    <p class="why">증상을 테스트로 적는다. 지금 일어나는 것(방화벽)과 결함을 넣어야 일어나는 것(필터의 예외)을 따로 적는다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/ErrorResponseAcceptanceTests.java</b> (새 파일) — 7개. 지금 일어나는 경우다. 실제로 로그인해서 받은 토큰을 쓴다.</p>
+<pre class="diff"><span class="skip">… ErrorResponseAcceptanceTests.java — 앞의 55줄 …</span><span class="add">	/**</span><span class="add">	 * Spring Security의 방화벽은 이런 경로를 거부한다. 요청이 틀린 것이다 (400). 토큰이 틀린 것이 아니다 (401).</span><span class="add">	 */</span><span class="add">	@ParameterizedTest</span><span class="add">	@ValueSource(strings = { "/api/members/me;x=1", "/api//members/me", "/api/members/%2e%2e/me" })</span><span class="add">	void adr0005_a_path_that_the_server_does_not_accept_is_400_and_not_401(String path) {</span><span class="add">		client.get().uri(java.net.URI.create(path)).header("Authorization", "Bearer " + token).exchange()</span><span class="add">				.expectStatus().isBadRequest()</span><span class="add">				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)</span><span class="add">				.expectHeader().doesNotExist("WWW-Authenticate")</span><span class="add">				.expectBody()</span><span class="add">				.jsonPath("$.status").isEqualTo(400)</span><span class="add">				.jsonPath("$.title").isEqualTo("Bad Request")</span><span class="add">				.jsonPath("$.detail").isNotEmpty()</span><span class="add">				.jsonPath("$.instance").value(instance -&gt; assertThat(instance).isNotEqualTo("/error"));</span><span class="add">	}</span><span class="skip">… ErrorResponseAcceptanceTests.java — 뒤의 40줄 …</span><span class="skip">… ErrorResponseAcceptanceTests.java …</span><span class="add">	/** 오류의 화면을 밖에서 직접 부르는 요청은 다른 요청과 같다. 인증이 필요하다. (ADR-0003) */</span><span class="add">	@Test</span><span class="add">	void adr0003_the_error_page_requested_directly_needs_an_access_token() {</span><span class="add">		client.get().uri("/error").exchange()</span><span class="add">				.expectStatus().isUnauthorized()</span><span class="add">				.expectHeader().valueEquals("WWW-Authenticate", "Bearer");</span><span class="add">	}</span><span class="skip">… ErrorResponseAcceptanceTests.java — 뒤의 25줄 …</span></pre>
+    <ul>
+      <li>첫째 테스트는 상태만 보지 않는다. <code>WWW-Authenticate</code>가 없다, 형식이 Problem Details다, <code>instance</code>가 <code>/error</code>가 아니다. 3절에서 본 것처럼 숨은 오류와 맞는 거부를 구분하는 값은 <code>instance</code>다.</li>
+      <li>둘째 테스트는 고친 뒤에도 그대로여야 하는 것이다. 고치기 전에도 통과한다. 고치는 방법을 잘못 고르면(경로를 모두에게 연다) 실패한다. 수정의 범위를 지키는 테스트다.</li>
+    </ul>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/FilterErrorAcceptanceTests.java</b> (새 파일) — 2개. 필터의 안의 예외다. 유스케이스를 가짜로 바꿔서 만든다.</p>
+<pre class="diff"><span class="skip">… FilterErrorAcceptanceTests.java — 앞의 31줄 …</span><span class="add">	@MockitoBean</span><span class="add">	private GetMemberUseCase getMember;</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void adr0005_an_unexpected_error_in_the_filter_is_500_and_not_401() {</span><span class="add">		given(getMember.getMember(any())).willThrow(new IllegalStateException("cause-of-the-error"));</span><span class="add"></span><span class="add">		me()</span><span class="add">				.expectStatus().isEqualTo(500)</span><span class="add">				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)</span><span class="add">				.expectHeader().doesNotExist("WWW-Authenticate")</span><span class="add">				.expectBody()</span><span class="add">				.jsonPath("$.status").isEqualTo(500)</span><span class="add">				.jsonPath("$.title").isEqualTo("Internal Server Error")</span><span class="add">				.jsonPath("$.detail").isNotEmpty()</span><span class="add">				.jsonPath("$.instance").isEqualTo("/api/members/me");</span><span class="add">	}</span><span class="skip">… FilterErrorAcceptanceTests.java — 뒤의 19줄 …</span></pre>
+    <ul>
+      <li>보안 어댑터는 인증할 때 <code>GetMemberUseCase</code>를 부른다. 그 유스케이스가 예외를 던지게 한다. DB의 장애를 흉내 낸다.</li>
+      <li>기대하는 것: 500, 형식이 같다, <code>instance</code>가 요청의 경로다. 둘째 테스트(생략)는 예외의 글이 본문에 없다는 것을 본다 (AC-1.7).</li>
+    </ul>
+    <p>돌린 결과: 9개 중 7개가 실패했다. 이유는 모두 같다: "400(또는 500, 404)을 기대하는데 401(또는 500)이 왔다". 나머지 2개(직접 부른 <code>/error</code>는 401, 만료된 토큰은 401)는 처음부터 통과한다.</p>
+    <p class="bridge">증상이 테스트가 됐다. 원인은 인가의 규칙 한 줄이다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 넘기는 길을 연다</h3>
+    <p class="why">서버가 스스로 넘긴 요청에는 인증을 요구하지 않는다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/SecurityConfig.java</b> — 필터 체인의 설정. 인가의 규칙에 한 줄.</p>
+<pre class="diff"><span class="skip">… -4,4 +4,5 …</span><span class="ctx">import java.time.Duration;</span><span class="ctx"></span><span class="add">import jakarta.servlet.DispatcherType;</span><span class="ctx">import org.springframework.context.annotation.Bean;</span><span class="ctx">import org.springframework.context.annotation.Configuration;</span><span class="skip">… -27,4 +28,8 …</span><span class="ctx">	 * 가입과 로그인만 인증 없이 받아들인다. 나머지 요청에는 인증을 요구한다.</span><span class="ctx">	 * 세션과 CSRF 보호는 끈다. 토큰은 Authorization: Bearer 헤더로만 받는다.</span><span class="add">	 * &lt;p&gt;</span><span class="add">	 * 서버가 오류를 오류의 화면(/error)으로 넘기는 것은 허용한다. 클라이언트의 요청이 아니다. 서버의 안에서 넘기는 것이다.</span><span class="add">	 * 허용하지 않으면 서버의 오류(500)와 틀린 요청(400)이 모두 401로 바뀐다.</span><span class="add">	 * 클라이언트가 /error를 직접 부르는 요청은 다른 요청과 같다. 인증이 필요하다.</span><span class="ctx">	 */</span><span class="ctx">	@Bean</span><span class="skip">… -35,4 +40,5 …</span><span class="ctx">				.sessionManagement(session -&gt; session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span><span class="ctx">				.authorizeHttpRequests(requests -&gt; requests</span><span class="add">						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()</span><span class="ctx">						.requestMatchers(HttpMethod.POST, "/api/members", "/api/auth/login").permitAll()</span><span class="ctx">						.anyRequest().authenticated())</span></pre>
+    <ul>
+      <li><code>dispatcherTypeMatchers(DispatcherType.ERROR)</code>: 경로를 보지 않는다. 요청이 온 길의 종류를 본다. 클라이언트는 이 종류를 만들지 못한다. 서버만 만든다.</li>
+      <li>규칙의 순서가 뜻이다. 먼저 맞는 규칙이 이긴다. 이 줄이 <code>anyRequest().authenticated()</code>의 앞에 있어야 한다.</li>
+      <li>버린 방법: <code>requestMatchers("/error").permitAll()</code>. 같은 한 줄이고 증상도 고친다. 그러나 누구나 <code>/error</code>를 직접 부른다. 단계 1의 둘째 테스트가 이것을 막는다.</li>
+      <li>이 줄만 고치면 어떻게 되는가: 넘긴 요청이 Spring Boot의 기본 오류 화면에 닿는다. 상태는 맞다 (400, 500). 본문은 Problem Details가 아니다 (<code>{"timestamp":…,"status":400,"error":"Bad Request",…}</code>). ADR-0005를 어긴다.</li>
+    </ul>
+    <p class="bridge">길이 열렸다. 길의 끝에 이 프로젝트의 화면을 둔다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 길의 끝: 오류의 화면</h3>
+    <p class="why">서버가 적어 둔 상태와 경로를 읽어서 Problem Details를 만든다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/web/ProblemDetailsErrorController.java</b> (새 파일) — <code>/error</code>를 받는 컨트롤러. Spring Boot의 기본 오류 화면을 대신한다.</p>
+<pre class="diff"><span class="skip">… ProblemDetailsErrorController.java — 앞의 19줄 …</span><span class="add">@RestController</span><span class="add">class ProblemDetailsErrorController implements ErrorController {</span><span class="add"></span><span class="add">	@RequestMapping("/error")</span><span class="add">	ResponseEntity&lt;ProblemDetail&gt; error(HttpServletRequest request) {</span><span class="add">		HttpStatus status = statusOf(request);</span><span class="add">		ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detailOf(status));</span><span class="add">		URI instance = instanceOf(request);</span><span class="add">		if (instance != null) {</span><span class="add">			problem.setInstance(instance);</span><span class="add">		}</span><span class="add">		return ResponseEntity.status(status).body(problem);</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 오류가 없는데 이 경로를 직접 부른 요청에는 상태가 없다. 그런 자원은 없다 (404). */</span><span class="add">	private static HttpStatus statusOf(HttpServletRequest request) {</span><span class="add">		Object code = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);</span><span class="add">		HttpStatus status = (code instanceof Integer value) ? HttpStatus.resolve(value) : null;</span><span class="add">		return (status != null) ? status : HttpStatus.NOT_FOUND;</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 글은 고정이다. 원인을 넣지 않는다. 원인의 글에 저장된 값이 들어 있는 경우가 있다. (AC-1.7) */</span><span class="add">	private static String detailOf(HttpStatus status) {</span><span class="add">		if (status.is5xxServerError()) {</span><span class="add">			return "서버에서 오류가 났다";</span><span class="add">		}</span><span class="add">		if (status == HttpStatus.NOT_FOUND) {</span><span class="add">			return "요청한 자원이 없다";</span><span class="add">		}</span><span class="add">		return "요청을 받아들일 수 없다";</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 오류가 난 요청의 경로. /error가 아니다. */</span><span class="add">	private static URI instanceOf(HttpServletRequest request) {</span><span class="add">		Object uri = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);</span><span class="add">		if (!(uri instanceof String path)) {</span><span class="add">			return null;</span><span class="add">		}</span><span class="add">		try {</span><span class="add">			return URI.create(path);</span><span class="add">		}</span><span class="add">		catch (IllegalArgumentException exception) {</span><span class="add">			return null;</span><span class="add">		}</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li><code>implements ErrorController</code>: Spring Boot는 이 타입의 빈이 있으면 기본 오류 화면을 만들지 않는다. 그래서 <code>"status": 999</code>인 기본 본문이 나가는 길이 없어진다.</li>
+      <li>서버가 적어 둔 값 둘을 읽는다: <code>ERROR_STATUS_CODE</code>(상태)와 <code>ERROR_REQUEST_URI</code>(원래의 경로). 서버가 적어 둔 값은 더 있다: 예외와 메시지. 그 둘은 읽지 않는다.</li>
+      <li><code>detailOf()</code>의 글은 셋이고 고정이다. 예외의 글에는 SQL이나 저장된 값이 들어 있는 경우가 있다. 컨트롤러의 안의 500(<code>ApiExceptionHandler</code>)과 같은 글을 쓴다: "서버에서 오류가 났다". 두 클래스는 같은 패키지에 있다. 글은 따로 적혀 있다 (리뷰 메모 4).</li>
+      <li><code>statusOf()</code>: 상태가 없으면 404다. 클라이언트가 유효한 토큰으로 <code>/error</code>를 직접 부른 경우다. 오류가 없는데 오류의 화면을 불렀다. 그런 자원은 없다.</li>
+      <li>자리는 <code>adapter.web</code>이다. HTTP의 응답을 만드는 일이다. 보안 어댑터는 길을 열기만 한다.</li>
+    </ul>
+    <p class="bridge">테스트 9개가 통과한다. 하나가 남았다. 이 결함을 놓친 테스트다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>단계 4 — 상태만 보던 테스트를 고친다</h3>
+    <p class="why">작업 6의 수용 테스트에는 "숫자가 아닌 <code>sub</code>"의 경우가 있었다. 그 테스트는 401인지만 봤다. 그래서 숨은 오류의 401이 통과했다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/GetMemberAcceptanceTests.java</b> — 작업 6의 수용 테스트.</p>
+<pre class="diff"><span class="skip">… -17,10 +17,6 …</span><span class="ctx">import javax.sql.DataSource;</span><span class="ctx"></span><span class="del">import com.nimbusds.jose.JWSAlgorithm;</span><span class="del">import com.nimbusds.jose.JWSHeader;</span><span class="del">import com.nimbusds.jose.crypto.MACSigner;</span><span class="ctx">import com.nimbusds.jwt.JWTClaimsSet;</span><span class="ctx">import com.nimbusds.jwt.PlainJWT;</span><span class="del">import com.nimbusds.jwt.SignedJWT;</span><span class="ctx">import org.junit.jupiter.api.BeforeEach;</span><span class="ctx">import org.junit.jupiter.api.Test;</span><span class="skip">… -50,5 +46,5 …</span><span class="ctx">class GetMemberAcceptanceTests {</span><span class="ctx"></span><span class="del">	static final String SECRET = "acceptance-test-secret-0123456789abcdef";</span><span class="add">	static final String SECRET = TestTokens.SECRET;</span><span class="ctx">	private static final String PASSWORD = "correct-horse-battery";</span><span class="ctx">	private static final JsonMapper json = new JsonMapper();</span><span class="skip">… -209,8 +205,11 …</span><span class="ctx">		Instant expiry = clock.instant().plus(Duration.ofHours(1));</span><span class="ctx"></span><span class="del">		me(signed(SECRET, "999999999", expiry)).expectStatus().isUnauthorized();</span><span class="del">		me(signed(SECRET, "not-a-number", expiry)).expectStatus().isUnauthorized();</span><span class="del">		me(signed(SECRET, "-1", expiry)).expectStatus().isUnauthorized();</span><span class="del">		me(signed(SECRET, null, expiry)).expectStatus().isUnauthorized();</span><span class="add">		String noToken = bodyOf(client.get().uri("/api/members/me").exchange().expectStatus().isUnauthorized());</span><span class="add"></span><span class="add">		// 상태만 보지 않는다. 본문의 instance가 /error이면 서버의 오류가 401에 숨은 것이다</span><span class="add">		for (String subject : new String[] { "999999999", "not-a-number", "-1", "7.0", null }) {</span><span class="add">			assertThat(bodyOf(me(signed(SECRET, subject, expiry)).expectStatus().isUnauthorized()))</span><span class="add">					.as("sub = %s", subject).isEqualTo(noToken).contains("\"instance\":\"/api/members/me\"");</span><span class="add">		}</span><span class="ctx">	}</span><span class="ctx"></span><span class="skip">… -286,15 +285,6 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="del">	/** 테스트가 직접 만드는 토큰. */</span><span class="ctx">	private static String signed(String secret, String subject, Instant expiry) {</span><span class="del">		try {</span><span class="del">			SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256),</span><span class="del">					new JWTClaimsSet.Builder().subject(subject).expirationTime(Date.from(expiry)).build());</span><span class="del">			jwt.sign(new MACSigner(secret.getBytes(StandardCharsets.UTF_8)));</span><span class="del">			return jwt.serialize();</span><span class="del">		}</span><span class="del">		catch (Exception exception) {</span><span class="del">			throw new IllegalStateException(exception);</span><span class="del">		}</span><span class="add">		return TestTokens.signed(secret, subject, expiry);</span><span class="ctx">	}</span><span class="ctx"></span></pre>
+    <ul>
+      <li>가운데의 hunk가 요점이다. 전: 상태가 401이다. 후: 본문이 "토큰이 없는 요청의 본문"과 글자까지 같고, <code>instance</code>가 요청의 경로다.</li>
+      <li>이 테스트로 같은 결함을 다시 넣어 봤다 (변환기에서 숫자의 검사를 뺀다). 이제 수용 테스트가 실패한다. 단계 2와 3의 덕분에 그 결함의 응답이 500이 됐기 때문이기도 하다. 두 가지가 겹쳐서 잡는다.</li>
+      <li>나머지 hunk는 토큰을 만드는 코드를 <code>TestTokens</code>로 꺼낸 것이다. 수용 테스트 3개가 함께 쓴다.</li>
+    </ul>
+    <p class="bridge">전체 테스트는 203개에서 212개가 됐다.</p>
+    <details>
+      <summary>테스트는 결함을 잡는가: 7가지를 넣어 봤다</summary>
+      <table class="t">
+        <tr><th>넣은 결함</th><th>잡은 테스트</th></tr>
+        <tr><td>넘기는 길을 열지 않는다 (고치기 전의 상태)</td><td>수용 6</td></tr>
+        <tr><td>숫자가 아닌 <code>sub</code>를 그대로 바꾼다 (작업 6에서 수용 테스트가 놓쳤다)</td><td>수용 1, 단위 1</td></tr>
+        <tr><td>오류의 화면이 원인을 본문에 넣는다</td><td>수용 1</td></tr>
+        <tr><td>오류의 화면이 <code>instance</code>를 정하지 않는다</td><td>수용 4</td></tr>
+        <tr><td><code>/error</code>를 누구나 직접 부를 수 있다</td><td>수용 1</td></tr>
+        <tr><td>오류가 없는 <code>/error</code>가 500이다</td><td>수용 1</td></tr>
+        <tr><td>오류의 화면이 항상 500이다</td><td>수용 4</td></tr>
+      </table>
+    </details>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>src/test/java/trealworld/acceptance/TestTokens.java</code> (새 파일) — 테스트가 직접 만드는 액세스 토큰. <code>GetMemberAcceptanceTests</code>에 있던 코드다.</li>
+    <li><code>ErrorResponseAcceptanceTests.java</code>의 나머지 테스트 — 토큰이 없어도 이상한 경로는 400이다, 유효한 토큰으로 <code>/error</code>를 직접 부르면 404이고 기본 본문이 아니다, 만료된 토큰은 그대로 401이다.</li>
+    <li><code>docs/adr/0003-authentication.md</code> — "오류의 화면으로 넘기는 것에는 인증을 절대 요구해서는 안 된다. 클라이언트가 <code>/error</code>를 직접 부르는 요청에는 반드시 요구해야 한다."</li>
+    <li><code>docs/adr/0005-api-conventions.md</code> — 실패의 표에 400(서버가 받아들이지 않는 경로). 컨트롤러에 닿지 않은 요청의 오류도 같은 형식이다. <code>instance</code>는 오류가 난 요청의 경로다. 서버의 오류(500)를 401로 응답해서는 안 된다.</li>
+    <li><code>docs/journal/2026-11-17.md</code> — 스텝 51(작업 6의 설명 문서), 스텝 52(이 수정).</li>
+    <li><code>explain-diff-member-profile.html</code> (새 파일) — 작업 6의 설명 문서. 이 수정의 일부가 아니다. 같은 작업 트리에 있다.</li>
+  </ul>
+  <p class="callout-warn">ADR 2개는 승인된 문서다. AI가 고쳤다.</p>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>표시: <b>[확인]</b>은 서버를 띄우고 요청을 보내서 본 것이다. <b>[읽음]</b>은 코드에서 읽은 것이다. <b>[추정]</b>은 확인하지 않은 것이다.</p>
+  <ol>
+    <li><b>모르는 상태 코드가 404가 된다. [읽음]</b> <code>statusOf()</code>는 <code>HttpStatus.resolve()</code>가 null을 주면 404로 답한다. null은 두 경우다: 상태가 없다(직접 부른 요청), 그리고 Spring이 모르는 숫자다 (예: 499, 599). 뒤의 경우에 서버의 오류가 "자원이 없다"로 보인다. 지금 그런 숫자를 내는 코드는 없다. 고친다면: 상태가 없을 때만 404로 하고, 모르는 숫자는 500으로 한다.</li>
+    <li><b>DB의 장애는 실제로 만들어 보지 않았다. [추정]</b> 필터의 안의 예외는 두 방법으로 확인했다: 유스케이스를 가짜로 바꾼 테스트, 그리고 변환기에 결함을 넣은 서버. 둘 다 500이 나왔다. 실제 DB의 연결이 끊긴 경우는 해 보지 않았다. 같은 길을 지난다고 본다.</li>
+    <li><b>앱에 닿기 전의 오류는 그대로다. [확인]</b> 20000자인 헤더를 보내면 Tomcat이 HTML의 400으로 답한다. 필터 체인에 닿기 전이다. Problem Details가 아니다. 이 수정의 범위 밖이다.</li>
+    <li><b>404가 두 가지 글이다. [확인]</b> 컨트롤러의 404(없는 경로)는 Spring의 영어다: "No static resource api/nothing." 오류의 화면의 404는 한국어다: "요청한 자원이 없다". 그리고 "서버에서 오류가 났다"는 글이 두 클래스에 따로 적혀 있다 (<code>ApiExceptionHandler</code>, <code>ProblemDetailsErrorController</code>).</li>
+    <li><b><code>instance</code>가 <code>/error</code>로 남는 경우가 하나 있다. [읽음]</b> <code>instanceOf()</code>는 원래의 경로를 <code>URI.create()</code>에 넣는다. 그 경로가 URI로 읽히지 않으면 null을 돌려준다. 그러면 Spring이 <code>instance</code>를 <code>/error</code>로 채운다. 방화벽이 거부하는 경로 중에 그런 것이 있는지는 확인하지 않았다. 테스트한 세 경로는 모두 읽힌다.</li>
+    <li><b>넘기는 길을 연 것이 다른 것을 열었는가. [읽음]</b> 넘긴 요청이 닿는 곳은 <code>/error</code>의 컨트롤러 하나다. 그 컨트롤러는 상태와 경로만 읽고 고정된 글을 쓴다. 회원의 정보에 닿지 않는다. 클라이언트는 이 종류의 요청을 만들지 못한다. 만료된 토큰과 직접 부른 <code>/error</code>가 그대로 401인 것은 테스트가 본다.</li>
+    <li><b>이 결함을 찾은 것은 테스트가 아니다. [확인]</b> 작업 6의 테스트 203개가 통과했고, 결함 17가지를 넣는 확인도 통과했다 (16개는 수용 테스트가 잡았고 1개는 단위 테스트만 잡았다). 그 "1개"가 실마리였다. 다른 수용 테스트에도 "상태만 본다"가 남아 있다. 예: <code>ac3_3_…</code>의 테스트들은 401인지만 본다. 지금은 넘기는 길이 열려서 숨은 오류가 401이 되지 않는다. 그래서 상태만 봐도 잡는다.</li>
+  </ol>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 규칙 하나: 다 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="b">
+      <p class="q-text">고치기 전에 <code>GET /api/members/me;x=1</code>을 유효한 토큰으로 보내면 401이었다. 토큰은 유효한데 왜 인증이 실패했는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">Bearer 필터가 경로의 <code>;x=1</code>을 토큰의 일부로 읽어서 서명이 맞지 않았다.</button>
+        <button type="button" data-opt="b">방화벽이 요청을 400으로 거부했고, 서버가 그것을 <code>/error</code>로 넘겼다. 넘긴 요청에는 인증된 사람이 없는데 인가의 규칙이 인증을 요구했다.</button>
+        <button type="button" data-opt="c">방화벽이 이상한 경로를 공격으로 보고 일부러 401로 답했다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>토큰은 검사되지도 않았다. 방화벽은 필터 체인의 맨 앞에 있다. 방화벽의 답은 400이었다. 그 400이 /error로 넘어가는 길에서 401로 바뀌었다. 본문의 instance가 /error인 것이 그 증거다.</p>
+        <a href="#background">다시 읽기: 1. 먼저 알아야 할 것</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">같은 증상을 <code>requestMatchers("/error").permitAll()</code> 한 줄로도 고칠 수 있다. 왜 그렇게 하지 않았는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">그 줄로는 넘긴 요청이 허용되지 않는다. 넘긴 요청의 경로는 <code>/error</code>가 아니고 원래의 경로다.</button>
+        <button type="button" data-opt="b">Spring Security가 <code>/error</code>의 경로를 규칙에 쓰는 것을 막는다.</button>
+        <button type="button" data-opt="c">클라이언트가 <code>/error</code>를 직접 부르는 요청까지 열린다. 허용할 것은 길의 종류(서버가 넘긴 것)이고 경로가 아니다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>그 줄도 증상을 고친다. 넘긴 요청의 경로는 /error이기 때문이다. 그러나 범위가 넓다. dispatcherTypeMatchers(ERROR)는 서버만 만들 수 있는 종류의 요청만 연다. "직접 부른 /error는 401이다"라는 테스트가 두 방법의 차이를 잡는다.</p>
+        <a href="#step2">다시 읽기: 단계 2</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">단계 2(길을 연다)만 하고 단계 3(오류의 화면)을 하지 않는다. <code>GET /api/members/me;x=1</code>의 응답은?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">400. 본문은 Spring Boot의 기본 오류 본문이다. 상태는 맞고 형식이 ADR-0005와 다르다.</button>
+        <button type="button" data-opt="b">401. 오류의 화면이 없으면 넘긴 요청이 갈 곳이 없어서 다시 거부된다.</button>
+        <button type="button" data-opt="c">400. 본문이 없다. 서버가 상태만 돌려준다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>Spring Boot는 /error에 기본 오류 화면을 둔다. 길이 열리면 넘긴 요청이 거기에 닿는다. 상태는 서버가 적어 둔 400이다. 본문은 timestamp, status, error가 있는 JSON이다. Problem Details가 아니다. 단계 3의 클래스가 그 기본 화면을 대신한다.</p>
+        <a href="#step3">다시 읽기: 단계 3</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">두 401이 있다. 하나는 맞는 거부이고 하나는 숨은 서버의 오류다 (고치기 전). 상태, <code>WWW-Authenticate</code>, <code>detail</code>이 같다. 테스트가 둘을 구분하려면 무엇을 봐야 하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a"><code>Content-Type</code>. 숨은 오류는 <code>application/json</code>이다.</button>
+        <button type="button" data-opt="b">응답 시간. 숨은 오류는 한 번 더 넘기므로 느리다.</button>
+        <button type="button" data-opt="c">본문의 <code>instance</code>. 맞는 거부는 요청의 경로이고, 숨은 오류는 <code>/error</code>다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>두 응답은 같은 클래스(인증 실패의 응답을 만드는 곳)가 만든다. 그래서 형식과 글이 같다. 다른 것은 "어느 요청에 대한 응답인가"다. 숨은 오류의 401은 넘긴 요청(/error)에 대한 응답이다. 작업 6의 테스트는 상태만 봤고, 그래서 놓쳤다.</p>
+        <a href="#step4">다시 읽기: 단계 4</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">고친 뒤에 누가 컨트롤러의 메서드 안에서 처리하지 않는 예외를 던진다. 그 응답은 누가 만드는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a"><code>ProblemDetailsErrorController</code>. 모든 서버의 오류는 이제 <code>/error</code>로 넘어간다.</button>
+        <button type="button" data-opt="b"><code>ApiExceptionHandler</code>. 컨트롤러의 안의 예외는 거기서 잡힌다. <code>/error</code>로 넘어가지 않는다.</button>
+        <button type="button" data-opt="c">인증 실패의 응답을 만드는 곳. 예외가 필터 체인을 거슬러 올라가서 401이 된다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>오류의 화면은 "컨트롤러에 닿지 않은 요청의 오류"를 위한 것이다: 필터의 안의 예외, 방화벽의 거부. 컨트롤러의 안의 예외는 전부터 ApiExceptionHandler의 "예상하지 못한 오류"의 처리가 500으로 바꿨다. 두 곳이 같은 글("서버에서 오류가 났다")을 쓴다. 그래서 클라이언트에게는 같게 보인다.</p>
+        <a href="#background">다시 읽기: 1절의 표의 아래</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+
+<script>
+/* LOGIC-START — 방화벽, 필터의 순서, SecurityConfig의 인가의 규칙(전과 후), ProblemDetailsErrorController, Spring Boot의 기본 오류 화면 */
+var TITLE={400:'Bad Request',404:'Not Found',500:'Internal Server Error'};
+function rejectedByFirewall(path){ return /;|\/\/|%2e/i.test(path); }
+function respond(request, version, fault){
+  var trace={firewall:null, bearer:null, authorize:null, forward:null, errorAuthorize:null, end:null};
+  var path=request.path;
+  var denied=function(instance){ return {status:401, www:'Bearer', type:'application/problem+json',
+    body:{detail:'액세스 토큰이 없거나 유효하지 않다', instance:instance, status:401, title:'Unauthorized'}}; };
+  var done=function(response,end){ trace.end=end; response.trace=trace; return response; };
+  /* 서버가 오류를 /error로 넘긴다 (ERROR dispatch). Bearer 필터는 넘긴 요청에서 다시 돌지 않는다 */
+  var forward=function(status){
+    trace.forward=status;
+    if(version==='old'){ trace.errorAuthorize='deny'; return done(denied('/error'),'entry'); }      /* anyRequest().authenticated() */
+    trace.errorAuthorize='permit';                                                                  /* dispatcherTypeMatchers(ERROR).permitAll() */
+    return done({status:status, type:'application/problem+json', body:{
+      detail: status>=500 ? '서버에서 오류가 났다' : status===404 ? '요청한 자원이 없다' : '요청을 받아들일 수 없다',
+      instance:path, status:status, title:TITLE[status]}},'errorPage');
+  };
+  if(rejectedByFirewall(path)){ trace.firewall='reject'; return forward(400); }
+  trace.firewall='pass';
+  var authenticated=false;
+  if(request.token==='none') trace.bearer='skip';
+  else if(request.token==='expired'){ trace.bearer='deny'; return done(denied(path),'entry'); }
+  else if(request.token==='badsub'){
+    if(fault){ trace.bearer='exception'; return forward(500); }
+    trace.bearer='deny'; return done(denied(path),'entry');
+  }
+  else { trace.bearer='ok'; authenticated=true; }
+  if(!authenticated){ trace.authorize='deny'; return done(denied(path),'entry'); }
+  trace.authorize='ok';
+  if(path==='/api/members/me') return done({status:200, type:'application/json', body:{username:'jake', email:'jake@example.com'}},'controller');
+  if(path==='/error'){
+    if(version==='old') return done({status:500, type:'application/json', body:{timestamp:'(시각)', status:999, error:'None'}},'bootErrorPage');
+    return done({status:404, type:'application/problem+json', body:{detail:'요청한 자원이 없다', instance:'/error', status:404, title:'Not Found'}},'errorPage');
+  }
+  return done({status:404, type:'application/problem+json', body:{detail:'No static resource '+path.slice(1)+'.', instance:path, status:404, title:'Not Found'}},'mvc');
+}
+/* LOGIC-END */
+(function(){
+  var fp=document.getElementById('f-path'); if(!fp) return;
+  var ft=document.getElementById('f-token'), ff=document.getElementById('f-fault');
+  ['/api/members/me','/api/members/me;x=1','/api//members/me','/api/members/%2e%2e/me','/error','/api/nothing'].forEach(function(p){
+    var o=document.createElement('option'); o.value=p; o.textContent='GET '+p; fp.appendChild(o); });
+  var words={
+    firewall:{pass:['yes','통과'], reject:['no','거부한다. sendError(400)']},
+    bearer:{skip:['skip','토큰이 없다. 넘긴다'], ok:['yes','토큰이 맞다. 요청한 회원: "1"'], deny:['no','인증 실패 → 401'], exception:['no','예외가 난다 (NumberFormatException)']},
+    authorize:{ok:['yes','인증된 사람이 있다. 통과'], deny:['no','인증된 사람이 없다 → 401']},
+    errorAuthorize:{deny:['no','인증된 사람이 없다 → 401 (원래의 오류가 사라진다)'], permit:['yes','넘긴 요청은 허용한다']},
+    end:{entry:'인증 실패의 응답을 만드는 곳', errorPage:'오류의 화면 (ProblemDetailsErrorController)', bootErrorPage:'Spring Boot의 기본 오류 화면', controller:'컨트롤러 (MemberController.me)', mvc:'Spring MVC (경로가 없다)'}
+  };
+  function row(t,k,cls,v){ var tr=document.createElement('tr'), th=document.createElement('th'), td=document.createElement('td');
+    th.textContent=k; td.textContent=v; td.className=cls; tr.appendChild(th); tr.appendChild(td); t.appendChild(tr); }
+  function fill(id,r){
+    var t=document.getElementById(id), tr=r.trace; t.textContent='';
+    var step=function(k,label){ var v=tr[k]; if(v==null) row(t,label,'skip','실행하지 않는다'); else row(t,label,words[k][v][0],words[k][v][1]); };
+    step('firewall','방화벽'); step('bearer','Bearer 토큰의 필터'); step('authorize','인가 (요청)');
+    row(t,'서버가 /error로 넘긴다', tr.forward==null?'skip':'no', tr.forward==null?'넘기지 않는다':'넘긴다. 적어 둔 상태: '+tr.forward);
+    step('errorAuthorize','인가 (넘긴 요청)');
+    row(t,'응답을 만드는 곳','',words.end[tr.end]);
+    document.getElementById(id+'-r').textContent='HTTP '+r.status+'   '+r.type+(r.www?'\nWWW-Authenticate: '+r.www:'')+'\n'+JSON.stringify(r.body,null,2);
+  }
+  function render(){
+    var request={path:fp.value, token:ft.value};
+    var a=respond(request,'old',ff.checked), b=respond(request,'new',ff.checked);
+    fill('w-old',a); fill('w-new',b);
+    var same=a.status===b.status && JSON.stringify(a.body)===JSON.stringify(b.body);
+    var v=document.getElementById('w-verdict');
+    v.textContent = same ? '전과 후가 같다.' : '전과 후가 다르다: '+a.status+' → '+b.status;
+    v.style.color = same ? '' : 'var(--warn)';
+  }
+  [fp,ft,ff].forEach(function(f){ f.addEventListener('change',render); });
+  fp.value='/api/members/me;x=1'; render();
+})();
+</script>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>

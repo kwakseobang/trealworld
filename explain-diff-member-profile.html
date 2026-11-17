@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>조회: 토큰을 가진 사람만</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+
+/* 이 문서에서 더한 것: 표, 그림, 위젯. 색은 위의 토큰만 쓴다. */
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+table.t th,table.t td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg);font-weight:600}
+table.readout{font:13px/1.6 var(--mono)} table.readout th{white-space:nowrap;width:1%}
+.readout td.yes{color:var(--add-fg)} .readout td.no{color:var(--warn);font-weight:700} .readout td.skip{color:var(--muted);font-style:italic}
+.readout td{word-break:break-all}
+.d-band{fill:none;stroke:var(--line);stroke-dasharray:5 4} .d-core{fill:var(--card);stroke:var(--muted);stroke-dasharray:none}
+.d-box{fill:var(--card);stroke:var(--line)} .d-gate{fill:var(--accent-soft);stroke:var(--accent)}
+.d-member{fill:var(--code-bg);stroke:var(--fg);stroke-width:1.5}
+.d-txt{fill:var(--fg);font:11px var(--mono)} .d-sub{fill:var(--muted);font:11px var(--sans)}
+.d-lbl{fill:var(--muted);font:700 12px var(--sans)}
+.d-arrow{stroke:var(--fg);stroke-width:1.5} .d-impl{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:4 3}
+.d-head{fill:var(--fg)} .d-headi{fill:var(--accent)} .d-headw{fill:var(--warn)}
+.d-arroww{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 3}
+main li code,main p code,main td code{overflow-wrap:anywhere;word-break:break-all}
+.w-grid label{grid-template-columns:5.5em 1fr;font-family:var(--sans)}
+.w-grid select{min-width:0;font:14px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.w-grid label span{display:flex;gap:10px;align-items:center;font-weight:400} .w-grid input[type=range]{flex:1;padding:0} .w-grid output{font:13px var(--mono);white-space:nowrap}
+table.t td.no{color:var(--warn);font-weight:700}
+table.readout th{white-space:normal;width:34%}
+.file-role b,figcaption code{overflow-wrap:anywhere;word-break:break-all}
+.w-grid{display:grid;gap:8px}
+.w-grid label{font:600 13px var(--mono);display:grid;grid-template-columns:5.5em 1fr;gap:8px;align-items:center}
+.w-grid input{min-width:0;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.w-samples,.w-actions{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.w-samples button{font:12px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+.w-samples button:hover{border-color:var(--accent)}
+.w-actions button{font:600 13px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.w-cap{font:600 13px var(--sans);color:var(--muted);margin:14px 0 4px}
+.w-pre{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0;white-space:pre-wrap;word-break:break-all}
+.w-members{font:13px/1.6 var(--mono);margin:0;padding-left:1.2em}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">plan 01 · 작업 6 · 내 정보 조회</p>
+  <h1>토큰을 가진 사람만, 자기의 정보만</h1>
+  <div class="meta"><span>commit 0227ba7</span><span>25 files</span><span>+1003 / −58</span></div>
+  <div class="assumption">독자: Java, Spring, 헥사고날 아키텍처를 잘 아는 사람. 작업 5(로그인)의 구조를 안다. Spring Security의 필터 체인은 이름만 안다고 본다. 테스트는 대표만 보여 주고, 생략한 것은 개수를 적었다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>이 커밋의 앞: 토큰을 주지만 아무도 받지 않는다</h3>
+  <p>작업 5가 끝난 상태다. 로그인이 JWT를 준다. 그 토큰을 읽는 코드는 없다. 모든 경로가 열려 있다. Spring Security는 두 조각만 있다: BCrypt와 JWT의 인코더. 필터 체인은 없다.</p>
+  <table class="t">
+    <tr><th></th><th>이 커밋의 앞</th><th>이 커밋의 뒤</th></tr>
+    <tr><td>토큰을 발급한다</td><td>한다 (<code>JwtAccessTokenIssuer</code>)</td><td>그대로</td></tr>
+    <tr><td>토큰을 검사한다</td><td>하지 않는다</td><td>필터 체인이 한다</td></tr>
+    <tr><td>인증이 필요한 경로</td><td>없다</td><td>가입과 로그인을 뺀 모든 경로</td></tr>
+    <tr><td><code>adapter.security</code>의 방향</td><td>유스케이스가 부른다 (해시, 발급)</td><td>유스케이스를 부르기도 한다 (필터)</td></tr>
+  </table>
+
+  <h3>조회가 지킬 것</h3>
+  <table class="t">
+    <tr><th>ID</th><th>수준</th><th>요구 (줄였다)</th></tr>
+    <tr><td>AC-3.1</td><td>MUST</td><td>토큰이 유효하면 토큰의 주인의 사용자 이름과 이메일을 돌려준다.</td></tr>
+    <tr><td>AC-3.2</td><td>MUST</td><td>토큰이 없으면 거부한다.</td></tr>
+    <tr><td>AC-3.3</td><td>MUST</td><td>토큰이 위조됐으면 거부한다. 만료됐으면 거부한다.</td></tr>
+    <tr><td>AC-3.4</td><td>MUST NOT</td><td>다른 회원의 정보를 돌려줘서는 안 된다. 조회의 대상은 토큰의 주인이다.</td></tr>
+    <tr><td>AC-3.5</td><td>MUST</td><td>토큰이 유효해도 주인인 회원이 없으면 거부한다.</td></tr>
+    <tr><td>R10</td><td>MUST NOT</td><td>조회는 회원에게 다른 회원의 정보를 돌려줘서는 안 된다.</td></tr>
+  </table>
+
+  <h3>ADR이 이미 정한 것 중에서 설계를 좁힌 셋</h3>
+  <ol>
+    <li><b>ADR-0003: "토큰이 유효해도 회원이 없으면 인증 실패로 처리한다. 인증에 실패하면 보안 어댑터가 401을 응답한다."</b> AC-3.5를 컨트롤러가 처리하지 못한다. 필터가 처리해야 한다.</li>
+    <li><b>ADR-0003: "Spring Security는 <code>adapter</code>의 보안 부분에만 둔다."</b> 아키텍처 테스트가 이것을 강제한다. 컨트롤러는 <code>@AuthenticationPrincipal</code>과 <code>Authentication</code>을 쓰지 못한다.</li>
+    <li><b>ADR-0002의 규칙 4: "어댑터끼리는 서로 의존하지 않는다."</b> 보안 어댑터가 찾은 회원을 웹 어댑터에게 타입으로 넘기지 못한다.</li>
+  </ol>
+  <p>셋을 함께 지키는 방법이 이 커밋의 모양을 정한다.</p>
+
+  <details>
+    <summary>Spring Security의 필터 체인: 이 문서에 필요한 만큼</summary>
+    <p>요청은 컨트롤러에 닿기 전에 필터들을 차례로 지난다. 이 커밋에 중요한 필터는 둘이다.</p>
+    <ul>
+      <li><b>Bearer 토큰의 필터.</b> <code>Authorization: Bearer …</code> 헤더가 있으면 토큰을 꺼내서 검사한다. 실패하면 거기서 401로 끝낸다. 헤더가 없으면 아무것도 하지 않고 넘긴다. 이 필터는 경로를 보지 않는다.</li>
+      <li><b>인가의 필터.</b> 경로를 본다. 인증이 필요한 경로인데 인증된 사람이 없으면 401로 끝낸다.</li>
+    </ul>
+    <p>401의 응답을 만드는 곳은 하나다: <code>AuthenticationEntryPoint</code>. 두 필터가 같은 것을 부른다. 컨트롤러의 <code>@RestControllerAdvice</code>는 필터의 뒤에 있다. 필터의 실패는 거기에 닿지 않는다.</p>
+  </details>
+</section>
+
+<section id="idea">
+  <h2>2. 한 문장으로</h2>
+  <p class="intuition">필터가 "누가 요청했는가"를 정하고, 컨트롤러는 그 답만 받는다. 컨트롤러에는 "누구의 정보를"을 받는 자리가 없다.</p>
+  <p>요청은 컨트롤러에 닿기 전에 확인 넷을 지난다. 서명이 맞는가. 만료 전인가. <code>sub</code>가 회원의 식별자인가. 그 회원이 지금 있는가. 넷 중 하나라도 실패하면 같은 401이 나간다. 이유는 본문에 없다.</p>
+  <p>넷을 지나면 "누가"가 정해진다. 그 답은 글자 하나다: 회원의 식별자. 컨트롤러는 그것을 표준 Java의 <code>Principal</code>로 읽는다. 컨트롤러의 메서드에는 다른 인자가 없다. 경로의 변수도, 쿼리도, 본문도 없다. 그래서 다른 회원을 가리킬 방법이 없다. R10은 "하지 않는다"가 아니고 "할 자리가 없다"로 지켜진다.</p>
+  <figure>
+    <svg viewBox="0 0 760 236" role="img" aria-label="요청이 필터를 지나서 컨트롤러에 닿는다">
+      <defs>
+        <marker id="ah6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-head"/></marker>
+        <marker id="ah6w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-headw"/></marker>
+      </defs>
+      <rect x="150" y="6" width="330" height="128" rx="10" class="d-band"/>
+      <text x="162" y="24" class="d-lbl">adapter.security — 필터</text>
+      <rect x="6" y="52" width="110" height="56" rx="8" class="d-box"/>
+      <text x="61" y="76" text-anchor="middle" class="d-lbl">요청</text>
+      <text x="61" y="94" text-anchor="middle" class="d-sub">Bearer 토큰</text>
+      <rect x="162" y="36" width="140" height="88" rx="8" class="d-gate"/>
+      <text x="232" y="56" text-anchor="middle" class="d-lbl">토큰의 검사</text>
+      <text x="174" y="78" class="d-sub">① 서명이 맞는가</text>
+      <text x="174" y="98" class="d-sub">② 만료 전인가</text>
+      <rect x="326" y="36" width="142" height="88" rx="8" class="d-gate"/>
+      <text x="397" y="56" text-anchor="middle" class="d-lbl">누가 요청했는가</text>
+      <text x="338" y="78" class="d-sub">③ sub가 식별자인가</text>
+      <text x="338" y="98" class="d-sub">④ 회원이 있는가</text>
+      <rect x="516" y="52" width="110" height="56" rx="8" class="d-member"/>
+      <text x="571" y="76" text-anchor="middle" class="d-lbl">컨트롤러</text>
+      <text x="571" y="94" text-anchor="middle" class="d-sub">me(Principal)</text>
+      <rect x="656" y="52" width="98" height="56" rx="8" class="d-box"/>
+      <text x="705" y="76" text-anchor="middle" class="d-lbl">200</text>
+      <text x="705" y="94" text-anchor="middle" class="d-sub">내 정보</text>
+      <rect x="216" y="176" width="200" height="52" rx="8" class="d-box"/>
+      <text x="316" y="198" text-anchor="middle" class="d-lbl">401</text>
+      <text x="316" y="216" text-anchor="middle" class="d-sub">①②③④와 "토큰이 없다"가 같다</text>
+      <rect x="486" y="176" width="170" height="52" rx="8" class="d-box"/>
+      <text x="571" y="198" text-anchor="middle" class="d-lbl">유스케이스</text>
+      <text x="571" y="216" text-anchor="middle" class="d-sub">getMember(식별자)</text>
+      <line x1="116" y1="80" x2="160" y2="80" class="d-arrow" marker-end="url(#ah6)"/>
+      <line x1="302" y1="80" x2="324" y2="80" class="d-arrow" marker-end="url(#ah6)"/>
+      <line x1="468" y1="80" x2="514" y2="80" class="d-arrow" marker-end="url(#ah6)"/>
+      <text x="491" y="72" text-anchor="middle" class="d-txt">"7"</text>
+      <line x1="626" y1="80" x2="654" y2="80" class="d-arrow" marker-end="url(#ah6)"/>
+      <line x1="232" y1="124" x2="290" y2="174" class="d-arroww" marker-end="url(#ah6w)"/>
+      <line x1="397" y1="124" x2="342" y2="174" class="d-arroww" marker-end="url(#ah6w)"/>
+      <line x1="571" y1="108" x2="571" y2="174" class="d-arrow" marker-end="url(#ah6)"/>
+      <line x1="440" y1="124" x2="500" y2="174" class="d-impl" marker-end="url(#ah6)"/>
+    </svg>
+    <figcaption>필터에서 컨트롤러로 넘어가는 것은 글자 하나다 (<code>"7"</code>). 점선: ④도 같은 유스케이스에 묻는다. 그래서 회원을 두 번 읽는다.</figcaption>
+  </figure>
+</section>
+
+<section id="explore">
+  <h2>3. 직접 넣어 보기</h2>
+  <p>회원이 둘 있다: <code>jake</code>(식별자 1)와 <code>finn</code>(식별자 2). 요청을 만들고 어디에서 멈추는지 본다. 두 가지를 먼저 예측한다. (가) "지난 시간"을 끌어서 60분을 넘기면 어느 줄이 바뀌는가. (나) 요청을 "로그인"으로 바꾸고 다른 키의 토큰을 붙이면 응답의 본문은 어느 쪽의 401인가.</p>
+  <div class="widget">
+    <div class="live">
+      <p class="w-cap">요청</p>
+      <div id="w-target" class="w-samples"></div>
+      <p class="w-cap">토큰</p>
+      <div class="w-grid">
+        <label>헤더 <select id="f-has"><option value="yes">Authorization: Bearer … 를 붙인다</option><option value="no">붙이지 않는다</option></select></label>
+        <label>서명 <select id="f-key"><option value="right">서버의 키로 서명했다</option><option value="other">다른 키로 서명했다</option><option value="none">서명이 없다 (alg: none)</option><option value="garbage">토큰이 아닌 값이다</option></select></label>
+        <label>sub <select id="f-sub"><option value="1">"1" (jake)</option><option value="2">"2" (finn)</option><option value="999">"999" (없는 회원)</option><option value="jake">"jake" (식별자가 아니다)</option><option value="-1">"-1"</option><option value="">(sub가 없다)</option></select></label>
+        <label>지난 시간 <span><input id="f-elapsed" type="range" min="0" max="7200" step="10" value="0"> <output id="o-elapsed"></output></span></label>
+      </div>
+      <table class="t readout">
+        <tr><th>토큰이 있는가</th><td id="s-has"></td></tr>
+        <tr><th>① 서명이 맞는가</th><td id="s-signature"></td></tr>
+        <tr><th>② 만료 전인가</th><td id="s-expiry"></td></tr>
+        <tr><th>③ sub가 식별자인가</th><td id="s-subject"></td></tr>
+        <tr><th>④ 회원이 있는가</th><td id="s-member"></td></tr>
+        <tr><th>이 경로에 인증이 필요한가</th><td id="s-authorize"></td></tr>
+        <tr><th>컨트롤러</th><td id="s-controller"></td></tr>
+      </table>
+      <p class="w-cap">이 요청의 응답</p>
+      <pre id="w-response" class="w-pre"></pre>
+    </div>
+    <div class="static-fallback">
+      <p>회원 <code>jake</code>(1)와 <code>finn</code>(2)이 있을 때, 실제 서버의 응답:</p>
+      <table class="t readout">
+        <tr><th>요청</th><th>상태</th><th>본문</th></tr>
+        <tr><td>유효한 토큰 (jake)<br>GET /api/members/me<br>서버의 키, sub &quot;1&quot;, 발급의 뒤 0분 00초</td><td>200</td><td>{&quot;username&quot;: &quot;jake&quot;, &quot;email&quot;: &quot;jake@example.com&quot;}</td></tr>
+        <tr><td>유효한 토큰 (finn)<br>GET /api/members/me<br>서버의 키, sub &quot;2&quot;, 발급의 뒤 0분 00초</td><td>200</td><td>{&quot;username&quot;: &quot;finn&quot;, &quot;email&quot;: &quot;finn@example.com&quot;}</td></tr>
+        <tr><td>토큰이 없다<br>GET /api/members/me<br>토큰이 없다</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>다른 키로 서명했다<br>GET /api/members/me<br>다른 키, sub &quot;1&quot;, 발급의 뒤 0분 00초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>서명이 없다 (alg: none)<br>GET /api/members/me<br>서명이 없다, sub &quot;1&quot;, 발급의 뒤 0분 00초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>발급의 뒤 59분 50초<br>GET /api/members/me<br>서버의 키, sub &quot;1&quot;, 발급의 뒤 59분 50초</td><td>200</td><td>{&quot;username&quot;: &quot;jake&quot;, &quot;email&quot;: &quot;jake@example.com&quot;}</td></tr>
+        <tr><td>발급의 뒤 60분 10초<br>GET /api/members/me<br>서버의 키, sub &quot;1&quot;, 발급의 뒤 60분 10초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>회원이 없는 식별자<br>GET /api/members/me<br>서버의 키, sub &quot;999&quot;, 발급의 뒤 0분 00초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>식별자가 아닌 sub<br>GET /api/members/me<br>서버의 키, sub &quot;jake&quot;, 발급의 뒤 0분 00초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>없는 경로, 토큰이 없다<br>GET /api/nothing<br>토큰이 없다</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+        <tr><td>없는 경로, 유효한 토큰<br>GET /api/nothing<br>서버의 키, sub &quot;1&quot;, 발급의 뒤 0분 00초</td><td>404</td><td>{&quot;detail&quot;: &quot;No static resource api/nothing.&quot;}</td></tr>
+        <tr><td>로그인(틀린 비밀번호), 토큰이 없다<br>POST /api/auth/login<br>토큰이 없다</td><td>401</td><td>{&quot;detail&quot;: &quot;이메일 또는 비밀번호가 틀리다&quot;}</td></tr>
+        <tr><td>로그인(틀린 비밀번호), 틀린 토큰<br>POST /api/auth/login<br>다른 키, sub &quot;1&quot;, 발급의 뒤 0분 00초</td><td>401</td><td>{&quot;detail&quot;: &quot;액세스 토큰이 없거나 유효하지 않다&quot;}</td></tr>
+      </table>
+    </div>
+    <div class="mirrors">같은 로직: <code>SecurityConfig</code>(필터 체인의 순서, 토큰의 검사), <code>MemberAuthenticationConverter</code>, <code>ProblemDetailsAuthenticationEntryPoint</code>, <code>MemberController.me()</code>. 이 커밋의 서버를 띄우고 요청 21개를 보냈다. 토큰은 서버와 같은 키로 직접 만들었다. 상태, 본문, <code>WWW-Authenticate</code> 헤더를 이 위젯의 결과와 대조했다. 정확히 60분 0초의 경계는 서버에 보내지 못했다. 그 경계는 단위 테스트(<code>AccessTokenDecoderTests</code>)가 확인한다.</div>
+  </div>
+  <p>알아챌 것 4개:</p>
+  <ul>
+    <li>60분 0초까지는 200이다. 60분 10초부터 401이다. 여유 시간이 없다.</li>
+    <li><code>sub</code>를 <code>"2"</code>로 바꾸면 finn의 정보가 나온다. 조회의 대상을 바꾸는 방법은 이것뿐이다. 그리고 <code>sub</code>를 바꾸려면 서버의 키가 필요하다.</li>
+    <li>실패의 다섯 가지(없다, 서명, 만료, 식별자, 회원)의 응답은 글자까지 같다. 멈춘 줄만 다르다.</li>
+    <li><b>로그인에 틀린 토큰을 붙이면 로그인의 401이 아니고 토큰의 401이 나온다.</b> 로그인은 인증이 필요 없다. 그러나 Bearer 토큰의 필터는 경로를 보지 않는다. 토큰이 없으면 로그인의 컨트롤러에 닿는다 (리뷰 메모 3).</li>
+  </ul>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 변경을 순서대로 읽기</h2>
+  <p>이번에는 ADR-0004의 순서를 지켰다. 수용 테스트 18개가 먼저 실패했다 (모두 404). 나머지 테스트 19개는 컴파일이 실패했다. 구현의 뒤에 모두 통과했다. <code>domain</code>은 바뀌지 않는다.</p>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 끝을 먼저 적는다: 수용 테스트</h3>
+    <p class="why">위조와 만료를 HTTP로 확인하려면 테스트가 토큰을 직접 만들고 시각을 바꿔야 한다. 그 두 가지가 이 테스트의 모양이다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/GetMemberAcceptanceTests.java</b> — AC-3.1 ~ 3.5, R10, ADR-0003, ADR-0005. 18개.</p>
+<pre class="diff"><span class="skip">… GetMemberAcceptanceTests.java — 앞의 46줄 (package, import, 주석) …</span><span class="add">@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "trealworld.jwt.secret="</span><span class="add">		+ GetMemberAcceptanceTests.SECRET)</span><span class="add">@AutoConfigureRestTestClient</span><span class="add">class GetMemberAcceptanceTests {</span><span class="add"></span><span class="add">	static final String SECRET = "acceptance-test-secret-0123456789abcdef";</span><span class="skip">… GetMemberAcceptanceTests.java — 뒤의 298줄 …</span><span class="add">	/** ADR-0003: 유효 시간은 1시간이다. 시각은 주입한 Clock에서 읽는다. */</span><span class="add">	@Test</span><span class="add">	void ac3_3_a_token_is_valid_just_before_it_expires_and_rejected_after_it_expires() {</span><span class="add">		clock.move(Duration.ofMinutes(59).plusSeconds(50));</span><span class="add">		me(token).expectStatus().isOk();</span><span class="add"></span><span class="add">		clock.move(Duration.ofMinutes(60).plusSeconds(10));</span><span class="add">		me(token).expectStatus().isUnauthorized();</span><span class="add">	}</span><span class="skip">… GetMemberAcceptanceTests.java — 뒤의 184줄 …</span><span class="add">	/** 토큰이 유효해도 그 주인인 회원이 없으면 거부한다. */</span><span class="add">	@Test</span><span class="add">	void ac3_5_a_valid_token_of_a_member_that_does_not_exist_is_rejected() {</span><span class="add">		me(token).expectStatus().isOk();</span><span class="add">		new JdbcTemplate(dataSource).update("delete from member where email = ?", email);</span><span class="add"></span><span class="add">		me(token)</span><span class="add">				.expectStatus().isUnauthorized()</span><span class="add">				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);</span><span class="add">	}</span><span class="skip">… GetMemberAcceptanceTests.java — 뒤의 145줄 …</span></pre>
+    <ul>
+      <li>서명 키를 설정으로 정한다 (<code>trealworld.jwt.secret</code>). 테스트가 같은 키를 안다. 그래서 "올바른 키로 서명했지만 만료됐다", "올바른 키인데 회원이 없다"를 만들 수 있다. 키가 임의이면 이 경우들을 만들지 못한다.</li>
+      <li>둘째 테스트: 실제로 로그인해서 받은 토큰을 쓴다. 테스트의 <code>Clock</code>을 59분 50초 앞으로 옮기면 200이다. 60분 10초 앞으로 옮기면 401이다. 발급하는 쪽과 검사하는 쪽이 같은 <code>Clock</code>을 읽어야 이 테스트가 통과한다.</li>
+      <li>셋째 테스트: 조회가 한 번 된 뒤에 회원을 DB에서 지운다. 같은 토큰이 401이 된다. 탈퇴의 기능이 없어서 SQL로 지운다 (리뷰 메모 8).</li>
+      <li><code>MovableClock</code>(파일의 끝)은 실제 시각에서 정한 만큼 앞으로 간 시각을 준다. <code>@Primary</code>인 빈으로 등록해서 <code>ClockConfig</code>의 빈을 가린다.</li>
+    </ul>
+    <p class="bridge">끝이 정해졌다. 가장 안쪽부터 만든다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 유스케이스: 식별자 하나로 회원 하나</h3>
+    <p class="why">가장 작은 유스케이스다. 작다는 것이 요점이다. R10은 "다른 것을 찾는 방법이 없다"로 지킨다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/application/port/in/GetMemberUseCase.java</b>, <b>application/service/GetMemberService.java</b> — 조회의 약속과 구현.</p>
+<pre class="diff"><span class="skip">… GetMemberUseCase.java — 앞의 7줄 (package, import, 주석) …</span><span class="add">public interface GetMemberUseCase {</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * @param memberId 요청한 회원의 식별자. 액세스 토큰의 주인이다. 다른 회원의 식별자를 넘겨서는 안 된다 (R10)</span><span class="add">	 * @throws MemberNotFoundException 그 회원이 없다</span><span class="add">	 */</span><span class="add">	Member getMember(Long memberId);</span><span class="add"></span><span class="add">}</span><span class="skip">… GetMemberService.java — 앞의 11줄 (package, import, 주석) …</span><span class="add">public class GetMemberService implements GetMemberUseCase {</span><span class="add"></span><span class="add">	private final MemberRepository members;</span><span class="add"></span><span class="add">	public GetMemberService(MemberRepository members) {</span><span class="add">		this.members = members;</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public Member getMember(Long memberId) {</span><span class="add">		if (memberId == null) {</span><span class="add">			throw new MemberNotFoundException();</span><span class="add">		}</span><span class="add">		return members.findById(memberId).orElseThrow(MemberNotFoundException::new);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <p class="file-role"><b>src/main/java/trealworld/application/port/out/MemberRepository.java</b> — 나가는 포트에 메서드 하나.</p>
+<pre class="diff"><span class="skip">… -18,4 +18,6 …</span><span class="ctx">	Member save(Member member);</span><span class="ctx"></span><span class="add">	Optional&lt;Member&gt; findById(Long id);</span><span class="add"></span><span class="ctx">	Optional&lt;Member&gt; findByEmail(Email email);</span><span class="ctx"></span></pre>
+    <ul>
+      <li>유스케이스의 인자는 식별자 하나다. 이름이나 이메일로 찾는 조회는 없다. 다른 회원을 찾으려면 그 회원의 식별자를 넘겨야 한다. 넘기는 곳은 둘뿐이다 (단계 5와 7). 둘 다 토큰의 <code>sub</code>를 넘긴다.</li>
+      <li>주석을 본다: "다른 회원의 식별자를 넘겨서는 안 된다". R10은 부르는 쪽의 약속이다. 타입은 이것을 막지 않는다 (리뷰 메모 7).</li>
+      <li><code>MemberNotFoundException</code>은 <code>port.in</code>에 있다. 보안 어댑터가 이 예외를 잡는다. 메시지는 "회원이 없다"다. 이 글은 응답에 나가지 않는다.</li>
+      <li>테스트는 <code>GetMemberServiceTests</code>다 (4개). 가짜 저장소가 "어느 식별자를 물었는가"를 적어 둔다.</li>
+    </ul>
+    <p class="bridge">조회는 됐다. 이제 "누가"를 정하는 쪽이다. 먼저 발급하는 쪽과 검사하는 쪽이 키를 함께 쓰게 한다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 서명 키를 꺼낸다</h3>
+    <p class="why">작업 5에서는 키가 <code>JwtAccessTokenIssuer</code>의 안에 있었다. 검사하는 쪽도 같은 키가 필요하다. 설정에 키가 없으면 임의의 키를 만든다. 그 키도 하나여야 한다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/JwtSigningKey.java</b> (새 파일), <b>JwtAccessTokenIssuer.java</b> — 키의 로직이 옮겨 갔다.</p>
+<pre class="diff"><span class="skip">… JwtSigningKey.java — 앞의 16줄 (package, import, 주석) …</span><span class="add">@Component</span><span class="add">class JwtSigningKey {</span><span class="add"></span><span class="add">	/** HS256의 키는 256비트 이상이어야 한다. */</span><span class="add">	private static final int MIN_SECRET_BYTES = 32;</span><span class="add"></span><span class="add">	private static final Log logger = LogFactory.getLog(JwtSigningKey.class);</span><span class="add"></span><span class="add">	private final SecretKey secretKey;</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * @param secret 설정 trealworld.jwt.secret의 값. 비어 있으면 임의의 키를 만든다</span><span class="add">	 */</span><span class="add">	JwtSigningKey(@Value("${trealworld.jwt.secret:}") String secret) {</span><span class="add">		byte[] bytes;</span><span class="add">		if (secret == null || secret.isBlank()) {</span><span class="add">			logger.warn("trealworld.jwt.secret이 없다. 임의의 서명 키를 만든다. 서버를 다시 시작하면 발급한 토큰은 모두 무효가 된다.");</span><span class="add">			bytes = new byte[MIN_SECRET_BYTES];</span><span class="add">			new SecureRandom().nextBytes(bytes);</span><span class="add">		}</span><span class="add">		else {</span><span class="add">			bytes = secret.getBytes(StandardCharsets.UTF_8);</span><span class="add">			if (bytes.length &lt; MIN_SECRET_BYTES) {</span><span class="add">				throw new IllegalArgumentException("trealworld.jwt.secret은 UTF-8로 32바이트 이상이어야 한다");</span><span class="add">			}</span><span class="add">		}</span><span class="add">		this.secretKey = new SecretKeySpec(bytes, "HmacSHA256");</span><span class="add">	}</span><span class="add"></span><span class="add">	SecretKey secretKey() {</span><span class="add">		return secretKey;</span><span class="add">	}</span><span class="add"></span><span class="add">}</span><span class="skip">… -1,16 +1,8 …</span><span class="ctx">package trealworld.adapter.security;</span><span class="ctx"></span><span class="del">import java.nio.charset.StandardCharsets;</span><span class="del">import java.security.SecureRandom;</span><span class="ctx">import java.time.Clock;</span><span class="ctx">import java.time.Duration;</span><span class="ctx"></span><span class="del">import javax.crypto.SecretKey;</span><span class="del">import javax.crypto.spec.SecretKeySpec;</span><span class="del"></span><span class="ctx">import com.nimbusds.jose.jwk.source.ImmutableSecret;</span><span class="del">import org.apache.commons.logging.Log;</span><span class="del">import org.apache.commons.logging.LogFactory;</span><span class="del">import org.springframework.beans.factory.annotation.Value;</span><span class="ctx">import org.springframework.security.oauth2.jose.jws.MacAlgorithm;</span><span class="ctx">import org.springframework.security.oauth2.jwt.JwsHeader;</span><span class="skip">… -34,17 +26,9 …</span><span class="ctx">	static final Duration VALIDITY = Duration.ofHours(1);</span><span class="ctx"></span><span class="del">	/** HS256의 키는 256비트 이상이어야 한다. */</span><span class="del">	private static final int MIN_SECRET_BYTES = 32;</span><span class="del"></span><span class="del">	private static final Log logger = LogFactory.getLog(JwtAccessTokenIssuer.class);</span><span class="del"></span><span class="ctx">	private final JwtEncoder encoder;</span><span class="ctx">	private final Clock clock;</span><span class="ctx"></span><span class="del">	/**</span><span class="del">	 * @param secret 서명 키. 설정 trealworld.jwt.secret에서 읽는다. 비어 있으면 임의의 키를 만든다</span><span class="del">	 */</span><span class="del">	JwtAccessTokenIssuer(@Value("${trealworld.jwt.secret:}") String secret, Clock clock) {</span><span class="del">		this.encoder = new NimbusJwtEncoder(new ImmutableSecret&lt;&gt;(key(secret)));</span><span class="add">	JwtAccessTokenIssuer(JwtSigningKey key, Clock clock) {</span><span class="add">		this.encoder = new NimbusJwtEncoder(new ImmutableSecret&lt;&gt;(key.secretKey()));</span><span class="ctx">		this.clock = clock;</span><span class="ctx">	}</span><span class="skip">… -63,19 +47,3 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="del">	private static SecretKey key(String secret) {</span><span class="del">		byte[] bytes;</span><span class="del">		if (secret == null || secret.isBlank()) {</span><span class="del">			logger.warn("trealworld.jwt.secret이 없다. 임의의 서명 키를 만든다. 서버를 다시 시작하면 발급한 토큰은 모두 무효가 된다.");</span><span class="del">			bytes = new byte[MIN_SECRET_BYTES];</span><span class="del">			new SecureRandom().nextBytes(bytes);</span><span class="del">		}</span><span class="del">		else {</span><span class="del">			bytes = secret.getBytes(StandardCharsets.UTF_8);</span><span class="del">			if (bytes.length &lt; MIN_SECRET_BYTES) {</span><span class="del">				throw new IllegalArgumentException("trealworld.jwt.secret은 UTF-8로 32바이트 이상이어야 한다");</span><span class="del">			}</span><span class="del">		}</span><span class="del">		return new SecretKeySpec(bytes, "HmacSHA256");</span><span class="del">	}</span><span class="del"></span><span class="ctx">}</span></pre>
+    <ul>
+      <li>동작은 바뀌지 않았다. 자리만 바뀌었다. 삭제된 58줄의 대부분이 이것이다.</li>
+      <li>키가 둘로 나뉘면 무슨 일이 일어나는가: 로그인은 되고, 조회는 모두 401이다. 결함을 넣는 확인에서 이것을 해 봤다 ("검사하는 쪽이 다른 키를 쓴다" → 수용 테스트 8개가 실패한다).</li>
+      <li><code>JwtAccessTokenIssuerTests</code>의 키에 관한 테스트 2개는 <code>JwtSigningKeyTests</code>(3개)로 옮겼다.</li>
+    </ul>
+    <p class="bridge">키가 하나다. 이제 그 키로 토큰을 검사한다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>단계 4 — 토큰을 검사한다: 서명과 만료 (①②)</h3>
+    <p class="why">AC-3.3이다. Spring Security의 디코더를 쓴다. 기본값 둘을 바꾼다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/SecurityConfig.java</b> — 아래쪽의 반. 디코더를 만든다.</p>
+<pre class="diff"><span class="add">	@Bean</span><span class="add">	JwtDecoder jwtDecoder(JwtSigningKey key, Clock clock) {</span><span class="add">		return accessTokenDecoder(key, clock);</span><span class="add">	}</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * 서명(HS256)과 만료 시각을 검사한다. 시각은 주입한 Clock에서 읽는다. 여유 시간을 두지 않는다.</span><span class="add">	 */</span><span class="add">	static JwtDecoder accessTokenDecoder(JwtSigningKey key, Clock clock) {</span><span class="add">		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key.secretKey()).macAlgorithm(MacAlgorithm.HS256)</span><span class="add">				.build();</span><span class="add">		JwtTimestampValidator expiry = new JwtTimestampValidator(Duration.ZERO);</span><span class="add">		expiry.setClock(clock);</span><span class="add">		decoder.setJwtValidator(expiry);</span><span class="add">		return decoder;</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <p class="file-role"><b>src/test/java/trealworld/adapter/security/AccessTokenDecoderTests.java</b> — 7개. 발급하는 쪽이 만든 토큰을 검사하는 쪽에 넣는다. 2개를 본다.</p>
+<pre class="diff"><span class="skip">… AccessTokenDecoderTests.java — 앞의 42줄 (package, import, 주석) …</span><span class="add">	/** ADR-0003: 유효 시간은 1시간이다. 여유 시간을 두지 않는다. */</span><span class="add">	@Test</span><span class="add">	void ac3_3_a_token_is_accepted_until_it_expires() {</span><span class="add">		assertThat(decoderAt(ISSUED.plus(Duration.ofMinutes(59)).plusSeconds(59)).decode(token)).isNotNull();</span><span class="add">		assertThat(decoderAt(ISSUED.plus(Duration.ofHours(1))).decode(token)).isNotNull();</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void ac3_3_an_expired_token_is_rejected() {</span><span class="add">		assertThatExceptionOfType(JwtException.class)</span><span class="add">				.isThrownBy(() -&gt; decoderAt(ISSUED.plus(Duration.ofHours(1)).plusSeconds(1)).decode(token));</span><span class="add">		assertThatExceptionOfType(JwtException.class)</span><span class="add">				.isThrownBy(() -&gt; decoderAt(ISSUED.plus(Duration.ofDays(1))).decode(token));</span><span class="add">	}</span><span class="skip">… AccessTokenDecoderTests.java — 뒤의 50줄 …</span></pre>
+    <ul>
+      <li><code>new JwtTimestampValidator(Duration.ZERO)</code>: Spring Security의 기본값은 60초의 여유다. 0으로 했다. ADR-0003이 "유효 시간은 반드시 1시간"이라고 한다. AI가 정했다.</li>
+      <li><code>expiry.setClock(clock)</code>: 기본값은 시스템의 시각이다. 이 한 줄이 없으면 단계 1의 "시각을 옮기는 테스트"가 실패한다.</li>
+      <li><code>macAlgorithm(HS256)</code>: 다른 알고리즘의 토큰을 받지 않는다. <code>"alg": "none"</code>도 여기서 거부된다.</li>
+      <li>테스트의 경계: 59분 59초와 60분 0초는 통과한다. 60분 1초는 거부한다. "만료 시각의 뒤"가 만료다.</li>
+      <li>위의 <code>@Bean</code> 메서드는 정적 메서드를 부르기만 한다. 테스트가 Spring 없이 디코더를 만들려고 나눴다.</li>
+    </ul>
+    <p class="bridge">서명이 맞고 만료 전인 토큰이 남았다. 아직 "누가"는 모른다. <code>sub</code>는 글자일 뿐이다.</p>
+  </div>
+
+  <div class="step" id="step5">
+    <h3>단계 5 — 토큰을 "누가 요청했는가"로 바꾼다 (③④)</h3>
+    <p class="why">AC-3.5다. 1절의 제약 1이 여기서 풀린다: 보안 어댑터가 회원이 있는지 확인한다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/MemberAuthenticationConverter.java</b> — 검사를 통과한 토큰을 받아서 인증을 만든다.</p>
+<pre class="diff"><span class="skip">… MemberAuthenticationConverter.java — 앞의 19줄 (package, import, 주석) …</span><span class="add">@Component</span><span class="add">class MemberAuthenticationConverter implements Converter&lt;Jwt, AbstractAuthenticationToken&gt; {</span><span class="add"></span><span class="add">	private final GetMemberUseCase getMember;</span><span class="add"></span><span class="add">	MemberAuthenticationConverter(GetMemberUseCase getMember) {</span><span class="add">		this.getMember = getMember;</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public AbstractAuthenticationToken convert(Jwt jwt) {</span><span class="add">		Long memberId = memberId(jwt.getSubject());</span><span class="add">		try {</span><span class="add">			getMember.getMember(memberId);</span><span class="add">		}</span><span class="add">		catch (MemberNotFoundException exception) {</span><span class="add">			throw new BadCredentialsException("토큰의 주인인 회원이 없다");</span><span class="add">		}</span><span class="add">		return new JwtAuthenticationToken(jwt, List.of(), String.valueOf(memberId));</span><span class="add">	}</span><span class="add"></span><span class="add">	/** 이 서버가 발급한 토큰의 sub는 숫자만 있는 글자다. 다른 모양은 받지 않는다. */</span><span class="add">	private static Long memberId(String subject) {</span><span class="add">		if (subject == null || !subject.matches("[0-9]{1,18}")) {</span><span class="add">			throw new BadCredentialsException("토큰의 주인이 회원의 식별자가 아니다");</span><span class="add">		}</span><span class="add">		return Long.valueOf(subject);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>보안 어댑터가 <b>들어오는</b> 포트(<code>GetMemberUseCase</code>)를 부른다. 작업 5까지 이 어댑터는 유스케이스가 부르는 쪽이었다. 이제 두 방향이다.</li>
+      <li><code>getMember.getMember(memberId)</code>의 결과를 버린다. 있는지만 본다. 찾은 회원을 컨트롤러에 넘기지 않는다. 넘기려면 웹 어댑터가 보안 어댑터의 타입을 알아야 한다 (제약 2, 3). 대가: 컨트롤러가 같은 회원을 다시 읽는다 (리뷰 메모 2).</li>
+      <li>마지막 줄의 셋째 인자가 인증의 이름이다: 회원의 식별자의 글자. 필터에서 컨트롤러로 넘어가는 것은 이것 하나다.</li>
+      <li>권한의 목록은 비어 있다 (<code>List.of()</code>). 이 슬라이스에는 역할이 없다.</li>
+      <li><code>[0-9]{1,18}</code>: 숫자만, 18자리까지. <code>"7.0"</code>, <code>" 7"</code>, <code>"-1"</code>은 회원을 찾지 않고 거부한다. 이 한 줄이 없으면 무슨 일이 일어나는지는 리뷰 메모 1에 있다.</li>
+      <li>실패는 둘 다 <code>BadCredentialsException</code>이다. 메시지는 다르다. 그 메시지는 응답에 나가지 않는다 (단계 6).</li>
+    </ul>
+    <p class="bridge">"누가"가 정해졌다. 이것을 필터 체인에 끼우고, 실패했을 때의 응답을 만든다.</p>
+  </div>
+
+  <div class="step" id="step6">
+    <h3>단계 6 — 필터 체인과 401의 본문</h3>
+    <p class="why">ADR-0003의 "요청의 인증"의 문장들이 여기에 한 줄씩 있다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/SecurityConfig.java</b> — 위쪽의 반. 체인을 조립한다.</p>
+<pre class="diff"><span class="skip">… SecurityConfig.java — 앞의 21줄 (package, import, 주석) …</span><span class="add">@Configuration(proxyBeanMethods = false)</span><span class="add">@EnableWebSecurity</span><span class="add">class SecurityConfig {</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * 가입과 로그인만 인증 없이 받아들인다. 나머지 요청에는 인증을 요구한다.</span><span class="add">	 * 세션과 CSRF 보호는 끈다. 토큰은 Authorization: Bearer 헤더로만 받는다.</span><span class="add">	 */</span><span class="add">	@Bean</span><span class="add">	SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder accessTokenDecoder,</span><span class="add">			MemberAuthenticationConverter memberAuthenticationConverter,</span><span class="add">			ProblemDetailsAuthenticationEntryPoint authenticationEntryPoint) throws Exception {</span><span class="add">		http.csrf(AbstractHttpConfigurer::disable)</span><span class="add">				.sessionManagement(session -&gt; session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span><span class="add">				.authorizeHttpRequests(requests -&gt; requests</span><span class="add">						.requestMatchers(HttpMethod.POST, "/api/members", "/api/auth/login").permitAll()</span><span class="add">						.anyRequest().authenticated())</span><span class="add">				.oauth2ResourceServer(server -&gt; server</span><span class="add">						.jwt(jwt -&gt; jwt.decoder(accessTokenDecoder)</span><span class="add">								.jwtAuthenticationConverter(memberAuthenticationConverter))</span><span class="add">						.authenticationEntryPoint(authenticationEntryPoint))</span><span class="add">				.exceptionHandling(handling -&gt; handling.authenticationEntryPoint(authenticationEntryPoint));</span><span class="add">		return http.build();</span><span class="add">	}</span></pre>
+    <table class="t">
+      <tr><th>코드</th><th>ADR-0003의 문장</th></tr>
+      <tr><td><code>csrf(…disable)</code>, <code>STATELESS</code></td><td>세션과 CSRF 보호는 반드시 꺼야 한다</td></tr>
+      <tr><td><code>requestMatchers(POST, …).permitAll()</code></td><td>가입과 로그인을 인증 없이 반드시 받아들여야 한다</td></tr>
+      <tr><td><code>anyRequest().authenticated()</code></td><td>나머지 요청에는 반드시 인증을 요구해야 한다</td></tr>
+      <tr><td><code>oauth2ResourceServer(… jwt …)</code></td><td>필터 체인이 토큰을 반드시 검사해야 한다. <code>Authorization: Bearer</code> 헤더로 받는다</td></tr>
+    </table>
+    <ul>
+      <li><code>permitAll()</code>은 <code>POST</code>만이다. <code>GET /api/auth/login</code>은 401이다.</li>
+      <li><code>authenticationEntryPoint</code>를 두 곳에 넣었다. 하나는 Bearer 필터의 실패(토큰이 틀리다)이고, 하나는 인가의 실패(토큰이 없다)다. 둘이 같은 응답을 만들게 한다.</li>
+      <li>CSRF를 끄지 않으면 모든 POST가 403이 된다. 결함을 넣는 확인에서 수용 테스트 73개가 실패했다.</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/security/ProblemDetailsAuthenticationEntryPoint.java</b> — 401의 응답을 만드는 유일한 곳.</p>
+<pre class="diff"><span class="skip">… ProblemDetailsAuthenticationEntryPoint.java — 앞의 22줄 (package, import, 주석) …</span><span class="add">@Component</span><span class="add">class ProblemDetailsAuthenticationEntryPoint implements AuthenticationEntryPoint {</span><span class="add"></span><span class="add">	private final JsonMapper jsonMapper;</span><span class="add"></span><span class="add">	ProblemDetailsAuthenticationEntryPoint(JsonMapper jsonMapper) {</span><span class="add">		this.jsonMapper = jsonMapper;</span><span class="add">	}</span><span class="add"></span><span class="add">	@Override</span><span class="add">	public void commence(HttpServletRequest request, HttpServletResponse response,</span><span class="add">			AuthenticationException authException) throws IOException {</span><span class="add">		Map&lt;String, Object&gt; problem = new LinkedHashMap&lt;&gt;();</span><span class="add">		problem.put("detail", "액세스 토큰이 없거나 유효하지 않다");</span><span class="add">		problem.put("instance", request.getRequestURI());</span><span class="add">		problem.put("status", HttpStatus.UNAUTHORIZED.value());</span><span class="add">		problem.put("title", HttpStatus.UNAUTHORIZED.getReasonPhrase());</span><span class="add"></span><span class="add">		response.setStatus(HttpStatus.UNAUTHORIZED.value());</span><span class="add">		response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");</span><span class="add">		response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);</span><span class="add">		// JsonMapper는 OutputStream에 UTF-8로 쓴다</span><span class="add">		jsonMapper.writeValue(response.getOutputStream(), problem);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li><code>authException</code>을 쓰지 않는다. 본문의 글은 고정이다. 실패의 이유(없다, 위조, 만료, 회원이 없다)가 본문에 없다. Spec은 이것을 요구하지 않았다. AI가 로그인의 R9와 같은 생각으로 정했다.</li>
+      <li>본문을 <code>Map</code>으로 만든다. 키의 순서와 모양이 컨트롤러의 오류(<code>ProblemDetail</code>)와 같다: <code>detail</code>, <code>instance</code>, <code>status</code>, <code>title</code>.</li>
+      <li><code>WWW-Authenticate: Bearer</code>: HTTP의 표준이 401에 요구하는 헤더다. 로그인 실패의 401(작업 5)에는 이 헤더가 없다. 두 401의 모양이 다르다 (리뷰 메모 6).</li>
+    </ul>
+    <p class="file-role"><b>build.gradle.kts</b> — 의존성 2개.</p>
+<pre class="diff"><span class="skip">… -21,5 +21,7 …</span><span class="ctx">	implementation("org.springframework.boot:spring-boot-starter-data-jpa")</span><span class="ctx">	implementation("org.springframework.boot:spring-boot-starter-webmvc")</span><span class="add">	implementation("org.springframework.boot:spring-boot-starter-security")</span><span class="ctx">	implementation("org.springframework.security:spring-security-crypto")</span><span class="add">	implementation("org.springframework.security:spring-security-oauth2-resource-server")</span><span class="ctx">	implementation("org.springframework.security:spring-security-oauth2-jose")</span><span class="ctx">	compileOnly("org.projectlombok:lombok")</span></pre>
+    <p class="bridge">인증된 요청만 컨트롤러에 닿는다. 마지막은 컨트롤러가 "누가"를 읽는 방법이다.</p>
+  </div>
+
+  <div class="step" id="step7">
+    <h3>단계 7 — 컨트롤러: "누가"만 받는다</h3>
+    <p class="why">AC-3.4와 R10이다. 1절의 제약 2가 여기서 풀린다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/web/MemberController.java</b> — 가입의 컨트롤러에 메서드 하나.</p>
+<pre class="diff"><span class="skip">… -1,5 +1,8 …</span><span class="ctx">package trealworld.adapter.web;</span><span class="ctx"></span><span class="add">import java.security.Principal;</span><span class="add"></span><span class="ctx">import org.springframework.http.HttpStatus;</span><span class="add">import org.springframework.web.bind.annotation.GetMapping;</span><span class="ctx">import org.springframework.web.bind.annotation.PostMapping;</span><span class="ctx">import org.springframework.web.bind.annotation.RequestBody;</span><span class="skip">… -8,4 +11,5 …</span><span class="ctx">import org.springframework.web.bind.annotation.RestController;</span><span class="ctx"></span><span class="add">import trealworld.application.port.in.GetMemberUseCase;</span><span class="ctx">import trealworld.application.port.in.RegisterMemberCommand;</span><span class="ctx">import trealworld.application.port.in.RegisterMemberUseCase;</span><span class="skip">… -17,7 +21,9 …</span><span class="ctx"></span><span class="ctx">	private final RegisterMemberUseCase registerMember;</span><span class="add">	private final GetMemberUseCase getMember;</span><span class="ctx"></span><span class="del">	MemberController(RegisterMemberUseCase registerMember) {</span><span class="add">	MemberController(RegisterMemberUseCase registerMember, GetMemberUseCase getMember) {</span><span class="ctx">		this.registerMember = registerMember;</span><span class="add">		this.getMember = getMember;</span><span class="ctx">	}</span><span class="ctx"></span><span class="skip">… -31,3 +37,14 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="add">	/**</span><span class="add">	 * 내 정보 조회. (ADR-0005: GET /api/members/me → 200)</span><span class="add">	 * 조회의 대상은 항상 요청한 회원이다. 요청의 본문과 경로에서 대상을 읽지 않는다. (AC-3.4, R10)</span><span class="add">	 *</span><span class="add">	 * @param requester 보안 어댑터가 인증한 회원. 이름이 회원의 식별자다</span><span class="add">	 */</span><span class="add">	@GetMapping("/me")</span><span class="add">	MemberResponse me(Principal requester) {</span><span class="add">		return MemberResponse.of(getMember.getMember(Long.valueOf(requester.getName())));</span><span class="add">	}</span><span class="add"></span><span class="ctx">}</span></pre>
+    <ul>
+      <li><code>java.security.Principal</code>은 표준 Java의 타입이다. Spring MVC가 요청에서 꺼내서 넣어 준다. Spring Security의 import가 없다. 아키텍처 테스트(<code>adr0003_spring_security_and_the_jwt_library_are_only_in_the_security_adapter</code>)가 통과한다.</li>
+      <li>인자가 하나다. <code>@PathVariable</code>, <code>@RequestParam</code>, <code>@RequestBody</code>가 없다. 수용 테스트가 이것을 본다: <code>/api/members/me?id=2&amp;username=finn…</code>을 보내도 jake가 나온다.</li>
+      <li>경로는 <code>/me</code>다. <code>/api/members/{id}</code>는 없다. 다른 회원의 주소가 없다.</li>
+      <li><code>getMember()</code>가 여기서 <code>MemberNotFoundException</code>을 던지는 경우가 하나 있다: 인증과 조회의 사이에 회원이 지워졌다. 이 예외의 처리는 없다. 500이 된다 (리뷰 메모 5).</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/UseCaseConfig.java</b>, <b>adapter/persistence/MemberPersistenceAdapter.java</b> — 조립과 식별자로 찾기.</p>
+<pre class="diff"><span class="skip">… -4,4 +4,5 …</span><span class="ctx">import org.springframework.context.annotation.Configuration;</span><span class="ctx"></span><span class="add">import trealworld.application.port.in.GetMemberUseCase;</span><span class="ctx">import trealworld.application.port.in.LoginUseCase;</span><span class="ctx">import trealworld.application.port.in.RegisterMemberUseCase;</span><span class="skip">… -9,4 +10,5 …</span><span class="ctx">import trealworld.application.port.out.MemberRepository;</span><span class="ctx">import trealworld.application.port.out.PasswordHasher;</span><span class="add">import trealworld.application.service.GetMemberService;</span><span class="ctx">import trealworld.application.service.LoginService;</span><span class="ctx">import trealworld.application.service.RegisterMemberService;</span><span class="skip">… -29,3 +31,8 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="add">	@Bean</span><span class="add">	GetMemberUseCase getMemberUseCase(MemberRepository members) {</span><span class="add">		return new GetMemberService(members);</span><span class="add">	}</span><span class="add"></span><span class="ctx">}</span><span class="skip">… -37,4 +37,9 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="add">	@Override</span><span class="add">	public Optional&lt;Member&gt; findById(Long id) {</span><span class="add">		return jpaRepository.findById(id);</span><span class="add">	}</span><span class="add"></span><span class="ctx">	@Override</span><span class="ctx">	public Optional&lt;Member&gt; findByEmail(Email email) {</span></pre>
+    <p class="bridge">수용 테스트 18개가 통과했다. 전체는 168개에서 203개가 됐다. Spec 01의 수용 기준 19개에 모두 테스트가 있다.</p>
+    <details>
+      <summary>테스트는 결함을 잡는가: 17가지를 넣어 봤다</summary>
+      <p>컴파일의 실패는 "테스트가 맞는 이유로 실패한다"를 보여 주지 않는다. 그래서 구현의 뒤에 코드를 17가지로 틀리게 바꾸고 전체 테스트를 돌렸다. 17가지를 모두 잡았다.</p>
+      <table class="t">
+        <tr><th>넣은 결함</th><th>잡은 테스트</th></tr>
+        <tr><td>모든 요청을 인증 없이 받는다</td><td>수용 6</td></tr>
+        <tr><td>만료의 뒤에 5분의 여유를 둔다</td><td>수용 3, 검사 1</td></tr>
+        <tr><td>검사하는 쪽이 <code>Clock</code>을 쓰지 않는다</td><td>수용 1, 검사 3</td></tr>
+        <tr><td>만료 시각을 검사하지 않는다</td><td>수용 3, 검사 1</td></tr>
+        <tr><td>검사하는 쪽이 다른 키를 쓴다</td><td>수용 8</td></tr>
+        <tr><td>회원이 있는지 확인하지 않는다</td><td>수용 3, 변환 1</td></tr>
+        <tr><td>인증의 이름이 항상 1이다</td><td>수용 3, 변환 1</td></tr>
+        <tr><td class="no">숫자가 아닌 <code>sub</code>를 그대로 바꾼다</td><td class="no">변환 1. 수용 테스트는 잡지 못했다 (리뷰 메모 1)</td></tr>
+        <tr><td>컨트롤러가 요청의 <code>id</code>를 조회한다</td><td>수용 1</td></tr>
+        <tr><td>401의 본문에 실패의 이유를 넣는다</td><td>수용 1</td></tr>
+        <tr><td>401의 형식이 Problem Details가 아니다</td><td>수용 2</td></tr>
+        <tr><td>401에 <code>WWW-Authenticate</code>가 없다</td><td>수용 1</td></tr>
+        <tr><td>CSRF 보호를 끄지 않는다</td><td>수용 73</td></tr>
+        <tr><td>세션의 정책을 정하지 않는다</td><td>수용 1</td></tr>
+        <tr><td>유스케이스가 없는 회원에 null을 준다</td><td>수용 3, 유스케이스 1</td></tr>
+        <tr><td>로그인에도 인증을 요구한다</td><td>수용 32</td></tr>
+        <tr><td>쿼리의 토큰도 받는다</td><td>수용 1</td></tr>
+      </table>
+    </details>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>src/main/java/trealworld/application/port/in/MemberNotFoundException.java</code> — 단계 2에서 말한 예외. 인자가 없는 생성자 하나.</li>
+    <li><code>src/test/java/trealworld/application/service/GetMemberServiceTests.java</code> (새 파일) — 4개. 가짜 저장소 하나.</li>
+    <li><code>src/test/java/trealworld/adapter/security/MemberAuthenticationConverterTests.java</code> (새 파일) — 3개. 인증의 이름이 식별자다, 회원이 없으면 인증 실패다, 식별자가 아닌 <code>sub</code>는 회원을 찾지 않고 거부한다.</li>
+    <li><code>src/test/java/trealworld/adapter/security/JwtSigningKeyTests.java</code> (새 파일) — 3개. <code>JwtAccessTokenIssuerTests.java</code>에서 2개가 옮겨 왔다. 그 파일은 8개에서 6개가 됐다.</li>
+    <li><code>src/test/java/trealworld/adapter/persistence/MemberPersistenceAdapterTests.java</code> — <code>findById</code>의 테스트 2개.</li>
+    <li><code>src/test/java/trealworld/application/service/LoginServiceTests.java</code>, <code>RegisterMemberServiceTests.java</code> — 가짜 저장소에 <code>findById</code>를 더했다. 포트가 늘어서 컴파일에 필요하다.</li>
+    <li><code>docs/adr/0001-tech-stack.md</code> — 의존성 2개.</li>
+    <li><code>docs/adr/0003-authentication.md</code> — 쿼리와 본문의 토큰을 받지 않는다, 여유 시간이 없다, 보안 어댑터가 회원을 확인한다, 401은 이유마다 같다, <code>WWW-Authenticate: Bearer</code>, 웹 어댑터는 <code>Principal</code>을 쓴다. "결과"에 두 번 읽기와 틀린 토큰의 가입.</li>
+    <li><code>docs/adr/0005-api-conventions.md</code> — 가입과 조회의 응답의 모양. 조회는 요청에서 대상을 읽지 않는다.</li>
+  </ul>
+  <p class="callout-warn">위의 ADR 3개는 승인된 문서다. AI가 구현하면서 고쳤다. 리뷰 메모 9를 본다. 일지(스텝 49)는 이 커밋에 없다. 다음 커밋(<code>bed13ab</code>)에 있다.</p>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>표시: <b>[확인]</b>은 이 커밋의 서버를 띄우고 요청을 보내서 본 것이다. <b>[읽음]</b>은 코드에서 읽은 것이다. <b>[추정]</b>은 아직 일어나지 않은 일이다.</p>
+  <ol>
+    <li><b>필터의 안에서 난 서버의 오류가 401로 보인다. [확인]</b> 변환기에서 숫자의 검사(<code>[0-9]{1,18}</code>) 한 줄을 빼고 서버를 다시 빌드했다. <code>sub</code>가 <code>"jake"</code>인 토큰을 보냈다. 서버의 안에서 <code>NumberFormatException</code>이 났다. 응답은 500이 아니고 <span class="warn">401</span>이었다. 본문의 <code>instance</code>가 <code>"/error"</code>다. 일어난 일: 오류가 나면 서버는 요청을 오류의 화면(<code>/error</code>)으로 넘긴다. 그 요청에도 인증이 필요하다. 인증된 사람이 없으므로 필터가 다시 401로 답한다. 그래서 수용 테스트(401을 기대한다)가 통과했다. 지금의 코드에는 그 한 줄이 있어서 이 길에 닿지 않는다. 그러나 같은 길이 하나 더 있다: 변환기가 회원을 확인할 때 DB가 실패하면, 클라이언트는 500이 아니고 401을 받는다 [추정]. 고장이 "토큰이 틀리다"로 보인다. <b>이 문서를 쓴 뒤에 고쳤다</b> (다음 커밋). 고칠 때 같은 증상을 하나 더 찾았다: 경로에 <code>;</code>이나 <code>//</code>가 있으면 유효한 토큰의 요청도 401이었다.</li>
+    <li><b>인증이 필요한 요청마다 회원을 두 번 읽는다. [읽음]</b> 변환기가 한 번, 컨트롤러의 유스케이스가 한 번이다. 1절의 제약 셋을 함께 지킨 값이다. 조회의 응답 시간은 2.55ms였다 (가운데 값). 다른 방법: 변환기가 찾은 회원을 요청의 속성에 넣는다. 웹 어댑터가 그 속성의 이름을 알아야 한다.</li>
+    <li><b>틀린 토큰을 붙이면 가입과 로그인도 401이다. [확인]</b> 3절의 위젯에서 본 것이다. 만료된 토큰을 가진 클라이언트가 그 토큰을 붙인 채로 다시 로그인하면 실패한다. 토큰을 떼고 로그인해야 한다. ADR-0003의 "결과"에 적었다. 결정은 받지 않았다.</li>
+    <li><b>응답 시간의 차이는 작다. [확인]</b> 40번씩 보내고 가운데 값을 쟀다: 토큰이 없다 0.94ms, 서명이 틀리다 1.13ms, 회원이 없다 1.56ms, 성공 2.55ms. 실패 중에서는 회원이 없는 경우만 DB를 읽는다. 실패끼리의 차이는 1ms보다 작다. 로그인(작업 5)의 40배와 다르다. 같은 컴퓨터에서 잰 값이다.</li>
+    <li><b>인증과 조회의 사이에 회원이 지워지면 500이다. [읽음]</b> 컨트롤러의 <code>getMember()</code>가 던지는 <code>MemberNotFoundException</code>을 처리하는 곳이 없다. 탈퇴의 기능이 없어서 지금은 닿지 않는다. 탈퇴를 만들 때 함께 봐야 한다.</li>
+    <li><b>401이 두 가지 모양이다. [확인]</b> 필터의 401에는 <code>WWW-Authenticate: Bearer</code>가 있고 본문이 "액세스 토큰이 없거나 유효하지 않다"다. 로그인 실패의 401에는 그 헤더가 없고 본문이 "이메일 또는 비밀번호가 틀리다"다. 그리고 Spring Security가 모든 응답에 헤더 6개를 더한다 (<code>Cache-Control: no-cache, no-store</code>, <code>X-Frame-Options: DENY</code> 등). 문서에 없는 동작이다.</li>
+    <li><b>R10은 부르는 쪽의 약속이다. [읽음]</b> <code>getMember(Long)</code>은 아무 식별자나 받는다. 지금은 부르는 곳이 둘이고 둘 다 토큰의 <code>sub</code>를 넘긴다. 셋째 호출이 생기면 주석만이 막는다. 그리고 보안 어댑터가 <code>port.in</code>만 쓰는지를 확인하는 아키텍처 규칙이 없다. 규칙 5는 웹 어댑터만 말한다.</li>
+    <li><b>수용 테스트가 DB를 직접 바꾼다. [읽음]</b> <code>delete from member where email = ?</code>. 테이블의 이름을 안다. 그리고 이 테스트는 테스트마다 서버의 컨텍스트를 새로 띄운다 (설정이 다르다). 전체 테스트가 조금 느려졌다.</li>
+    <li><b>AI가 승인된 ADR 3개를 고쳤고, 결정 5개를 혼자 했다. [확인]</b> 보안 어댑터가 회원을 확인한다(두 번 읽기). 401의 본문이 이유마다 같다. 여유 시간이 0이다. <code>sub</code>는 숫자만 받는다. 의존성 2개. 이 결정들을 승인하는가?</li>
+  </ol>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 규칙 하나: 다 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="b">
+      <p class="q-text">jake가 자기의 토큰으로 <code>GET /api/members/me?id=2</code>를 보낸다. 식별자 2는 finn이다. 응답은?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">finn의 정보. 요청이 대상을 정했고, jake의 토큰은 유효하다.</button>
+        <button type="button" data-opt="b">jake의 정보. 컨트롤러에는 쿼리를 받는 인자가 없다. 대상은 토큰의 <code>sub</code>에서만 나온다.</button>
+        <button type="button" data-opt="c">401. 필터가 토큰의 <code>sub</code>와 쿼리의 <code>id</code>를 비교하고 다르면 거부한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>me(Principal)의 인자는 하나다. 쿼리는 아무도 읽지 않는다. R10은 "비교해서 막는다"가 아니고 "가리킬 자리가 없다"로 지켜진다. finn의 정보를 받으려면 sub가 "2"인 토큰이 필요하고, 그 토큰을 만들려면 서버의 키가 필요하다.</p>
+        <a href="#step7">다시 읽기: 단계 7</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">컨트롤러가 <code>@AuthenticationPrincipal</code>로 회원을 바로 받으면 DB를 한 번만 읽는다. 왜 그렇게 하지 않았는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">Spring Boot 4에서 그 애너테이션이 없어졌다.</button>
+        <button type="button" data-opt="b">JWT의 인증에서는 주체가 토큰이어서 회원을 넣을 수 없다.</button>
+        <button type="button" data-opt="c">웹 어댑터가 Spring Security의 타입에 의존하게 된다. ADR-0003이 금지하고 아키텍처 테스트가 실패한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>기술로는 된다. 변환기가 인증의 주체에 무엇이든 넣을 수 있다. 막는 것은 규칙이다: "Spring Security는 보안 부분에만"과 "어댑터끼리 의존하지 않는다". 그래서 표준 Java의 Principal로 글자 하나만 넘기고, 컨트롤러가 회원을 다시 읽는다. 두 번 읽기는 규칙의 값이다.</p>
+        <a href="#background">다시 읽기: 1절의 제약 셋</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">만료된 토큰을 가진 앱이 다시 로그인한다. 앱은 모든 요청에 저장된 토큰을 붙인다. 이메일과 비밀번호는 맞다. 무슨 일이 일어나는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">401. 본문은 "액세스 토큰이 없거나 유효하지 않다"다. Bearer 토큰의 필터가 경로를 보지 않고 토큰을 검사한다.</button>
+        <button type="button" data-opt="b">200. 로그인은 <code>permitAll()</code>이므로 필터가 토큰을 보지 않는다.</button>
+        <button type="button" data-opt="c">401. 본문은 "이메일 또는 비밀번호가 틀리다"다. 로그인의 유스케이스가 토큰을 함께 확인한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>permitAll()은 인가의 필터에게 "인증이 없어도 된다"를 말한다. Bearer 필터는 그보다 앞에 있고 경로를 모른다. 토큰이 있으면 검사하고, 틀리면 거기서 끝낸다. 요청은 로그인의 컨트롤러에 닿지 않는다. 토큰을 떼면 로그인된다.</p>
+        <a href="#explore">다시 해 보기: 3. 직접 넣어 보기</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">누가 디코더에서 <code>expiry.setClock(clock)</code> 한 줄을 지운다. 운영의 서버에서는 무엇이 달라지는가? 그리고 어느 테스트가 실패하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">운영에서 토큰이 만료되지 않는다. 모든 만료의 테스트가 실패한다.</button>
+        <button type="button" data-opt="b">운영에서 모든 토큰이 거부된다. 수용 테스트 18개가 모두 실패한다.</button>
+        <button type="button" data-opt="c">운영에서는 달라지는 것이 거의 없다. 시각을 옮기거나 고정하는 테스트만 실패한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>그 줄이 없으면 디코더는 시스템의 시각을 읽는다. 운영의 Clock도 시스템의 시각이다. 그래서 운영에서는 같다. 깨지는 것은 "발급과 검사가 같은 시계를 본다"는 약속이고, 그것은 테스트의 Clock을 옮길 때만 보인다. 결함을 넣는 확인에서 수용 1개와 단위 3개가 실패했다. 이런 결함은 테스트가 없으면 끝까지 보이지 않는다.</p>
+        <a href="#step4">다시 읽기: 단계 4</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">변환기가 회원을 확인하는 중에 DB의 연결이 끊긴다. 클라이언트가 받는 응답은 무엇이라고 예상하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">500, Problem Details. <code>ApiExceptionHandler</code>의 "예상하지 못한 오류"의 처리가 잡는다.</button>
+        <button type="button" data-opt="b">401, <code>instance</code>가 <code>/error</code>다. 오류의 화면으로 넘어가는 요청도 인증이 필요해서 필터가 다시 답한다.</button>
+        <button type="button" data-opt="c">401, <code>instance</code>가 <code>/api/members/me</code>다. 변환기가 모든 예외를 인증 실패로 바꾼다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>필터의 안의 예외는 컨트롤러의 예외 처리에 닿지 않는다. 변환기는 MemberNotFoundException만 잡는다. 다른 예외는 서버의 오류가 되고, 서버는 /error로 넘긴다. 그 요청에 인증된 사람이 없어서 401이 나간다. 숫자가 아닌 sub로 같은 길을 확인했다. DB의 실패는 확인하지 않은 예상이다. 고장이 "토큰이 틀리다"로 보이는 것이 문제다.</p>
+        <a href="#review">다시 읽기: 6. 리뷰 메모 1</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+
+<script>
+/* LOGIC-START — SecurityConfig, MemberAuthenticationConverter, ProblemDetailsAuthenticationEntryPoint, MemberController (0227ba7) */
+var ME='GET /api/members/me', NOPE='GET /api/nothing', LOGIN='POST /api/auth/login';
+var VALIDITY=3600;
+function handle(request, members){
+  var path=request.target.split(' ')[1], token=request.token, who=null;
+  var deny=function(stage){ return {stage:stage, status:401, www:'Bearer',
+    body:{detail:'액세스 토큰이 없거나 유효하지 않다', instance:path, status:401, title:'Unauthorized'}}; };
+  if(token){
+    /* Bearer 토큰의 필터: 토큰이 있으면 경로와 관계없이 검사한다 */
+    if(token.key!=='right') return deny('signature');           /* NimbusJwtDecoder, HS256 */
+    if(token.elapsed>VALIDITY) return deny('expiry');            /* JwtTimestampValidator(Duration.ZERO) */
+    if(token.sub==null || !/^[0-9]{1,18}$/.test(token.sub)) return deny('subject');
+    who=String(Number(token.sub));
+    if(!members[who]) return deny('member');                     /* GetMemberUseCase */
+  }
+  /* 인가의 필터 */
+  if(!who && request.target!==LOGIN) return deny('authorize');
+  /* 컨트롤러 */
+  if(request.target===ME) return {stage:'controller', status:200, who:who, body:{username:members[who].username, email:members[who].email}};
+  if(request.target===LOGIN) return {stage:'controller', status:401, who:who,
+    body:{detail:'이메일 또는 비밀번호가 틀리다', instance:path, status:401, title:'Unauthorized'}};
+  return {stage:'controller', status:404, who:who, body:{detail:'No static resource api/nothing.', instance:path, status:404, title:'Not Found'}};
+}
+/* LOGIC-END */
+(function(){
+  var has=document.getElementById('f-has'); if(!has) return;
+  var key=document.getElementById('f-key'), sub=document.getElementById('f-sub'), el=document.getElementById('f-elapsed');
+  var members={'1':{username:'jake',email:'jake@example.com'}, '2':{username:'finn',email:'finn@example.com'}};
+  var targets=[[ME,'내 정보 조회'],[LOGIN,'로그인 (틀린 비밀번호)'],[NOPE,'없는 경로']], target=ME;
+  function cell(id,cls,text){ var e=document.getElementById(id); e.className=cls; e.textContent=text; }
+  function clock(s){ var m=Math.floor(s/60), r=s%60; return m+'분 '+(r<10?'0':'')+r+'초'; }
+  function render(){
+    var token = has.value==='yes' ? {key:key.value, sub: sub.value==='' ? null : sub.value, elapsed:Number(el.value)} : null;
+    var r=handle({target:target, token:token}, members);
+    var order=['signature','expiry','subject','member','authorize','controller'], at=order.indexOf(r.stage);
+    document.getElementById('o-elapsed').textContent='발급의 뒤 '+clock(Number(el.value));
+    [key,sub,el].forEach(function(f){ f.disabled=!token; });
+    cell('s-has', token?'yes':'skip', token?'있다. 경로를 보지 않고 검사한다':'없다. 검사할 것이 없다. 다음 필터로 넘긴다');
+    var step=function(id,i,pass,fail){
+      if(!token) return cell(id,'skip','실행하지 않는다');
+      cell(id, at<i?'skip':at===i?'no':'yes', at<i?'실행하지 않는다':at===i?fail+' 여기서 멈춘다 → 401':pass);
+    };
+    step('s-signature',0,'맞다','맞지 않다.');
+    step('s-expiry',1,'만료 전이다 (만료까지 '+clock(Math.max(0,VALIDITY-Number(el.value)))+')','만료됐다 ('+clock(Number(el.value)-VALIDITY)+' 전에).');
+    step('s-subject',2,'식별자다','식별자가 아니다. 회원을 찾지 않는다.');
+    step('s-member',3,'있다 (DB를 한 번 읽는다)','없다.');
+    if(at<4) cell('s-authorize','skip','실행하지 않는다');
+    else cell('s-authorize', at===4?'no':'yes', at===4?'필요하다. 인증된 사람이 없다. 여기서 멈춘다 → 401'
+      : target===LOGIN?'필요 없다 (POST /api/auth/login)':'필요하다. 요청한 회원: "'+r.who+'"');
+    if(at<5) cell('s-controller','skip','닿지 않는다');
+    else cell('s-controller','yes', target===ME?'me(Principal "'+r.who+'") → getMember('+r.who+') (DB를 한 번 더 읽는다)'
+      : target===LOGIN?'로그인의 유스케이스. 비밀번호가 틀리다 → 로그인의 401':'경로가 없다 → 404');
+    document.getElementById('w-response').textContent='HTTP '+r.status+'   '+(r.status===200?'application/json':'application/problem+json')
+      +(r.www?'\nWWW-Authenticate: '+r.www:'')+'\n'+JSON.stringify(r.body,null,2);
+  }
+  var box=document.getElementById('w-target');
+  targets.forEach(function(t){
+    var b=document.createElement('button'); b.type='button'; b.textContent=t[1]; b.title=t[0];
+    b.addEventListener('click',function(){ target=t[0]; Array.prototype.forEach.call(box.children,function(x){ x.style.borderColor=''; }); b.style.borderColor='var(--accent)'; render(); });
+    box.appendChild(b);
+  });
+  box.children[0].style.borderColor='var(--accent)';
+  [has,key,sub].forEach(function(f){ f.addEventListener('change',render); });
+  el.addEventListener('input',render);
+  render();
+})();
+</script>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
