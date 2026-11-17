@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>평서문을 MUST로</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+
+/* 이 문서에서 더한 것: 표, 그림, 위젯. 색은 위의 토큰만 쓴다. */
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+table.t th,table.t td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg);font-weight:600}
+table.t td.no{color:var(--warn);font-weight:700}
+table.readout{font:13px/1.6 var(--mono)} table.readout th{white-space:nowrap;width:1%}
+.readout td.yes{color:var(--add-fg)} .readout td.no{color:var(--warn);font-weight:700} .readout td.skip{color:var(--muted);font-style:italic}
+pre.diff.wrap span{white-space:pre-wrap;overflow-wrap:anywhere;padding-left:2.4em;text-indent:-1.3em}
+.d-box{fill:var(--card);stroke:var(--line)} .d-gate{fill:var(--accent-soft);stroke:var(--accent)}
+.d-member{fill:var(--code-bg);stroke:var(--fg);stroke-width:1.5}
+.d-txt{fill:var(--fg);font:12px var(--mono)} .d-sub{fill:var(--muted);font:11.5px var(--sans)}
+.d-lbl{fill:var(--fg);font:700 12.5px var(--sans)}
+.d-arrow{stroke:var(--muted);stroke-width:1.5} .d-head{fill:var(--muted)}
+.file-role b,figcaption code{overflow-wrap:anywhere;word-break:break-all}
+main li code,main p code,main td code{overflow-wrap:anywhere;word-break:break-all}
+table.t{table-layout:auto} table.t td,table.t th{overflow-wrap:anywhere}
+.w-grid{display:grid;gap:8px}
+.w-grid label{font:600 13px var(--sans);display:grid;grid-template-columns:3em 1fr;gap:8px;align-items:center}
+.w-grid input{min-width:0;font:14px var(--sans);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.w-samples{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.w-samples button{font:12px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+.w-samples button:hover{border-color:var(--accent)}
+.w-cap{font:600 13px var(--sans);color:var(--muted);margin:14px 0 4px}
+.w-pre{font:14px/1.6 var(--sans);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">문서 7개 · RFC 2119 + ASD-STE100 · 일지의 스텝 42 ~ 45</p>
+  <h1>평서문을 "반드시"로 바꾸면 결함이 보인다</h1>
+  <div class="meta"><span>작업 트리 (5b62ad1의 뒤, 커밋 전)</span><span>27 files</span><span>+807 / −166</span></div>
+  <div class="assumption">독자: 이 프로젝트의 spec, Domain 01, ADR을 쓴 사람. RFC 2119와 ASD-STE100의 이름은 안다. 문서의 변경이 크다. 문장은 대표만 보여 준다. 나머지는 3절의 위젯에서 28개를 모두 본다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>두 표준은 다른 것을 다룬다</h3>
+  <table class="t">
+    <tr><th></th><th>RFC 2119</th><th>ASD-STE100</th></tr>
+    <tr><th>다루는 것</th><td>요구의 <b>수준</b>: 필수, 금지, 권장, 허용</td><td>문장의 <b>모양</b>: 짧다, 능동태다, 한 개념에 한 용어다</td></tr>
+    <tr><th>답하는 질문</th><td>"어겨도 되는가?"</td><td>"무슨 뜻인가?"</td></tr>
+    <tr><th>단위</th><td>키워드</td><td>문장 전체와 낱말</td></tr>
+  </table>
+  <p>그래서 한 문장에 함께 쓴다. 전역 규칙(<code>CLAUDE.md</code>)이 한국어의 말을 정했다.</p>
+  <table class="t">
+    <tr><th>한국어</th><th>RFC 2119</th><th>뜻</th></tr>
+    <tr><td><b>반드시 ~해야 한다</b></td><td>MUST</td><td>예외가 없는 요구</td></tr>
+    <tr><td><b>절대 ~해서는 안 된다</b></td><td>MUST NOT</td><td>예외가 없는 금지</td></tr>
+    <tr><td><b>~하는 것을 권장한다</b></td><td>SHOULD</td><td>이유가 있으면 따르지 않아도 된다</td></tr>
+    <tr><td><b>~할 수 있다</b></td><td>MAY</td><td>허용. 해도 되고 하지 않아도 된다</td></tr>
+  </table>
+  <details>
+    <summary>두 표준이 충돌하는 곳 2개</summary>
+    <p><b>낱말 (영어에서만).</b> STE100에는 허용된 낱말의 사전이 있다. AI의 기억으로는 <code>shall</code>, <code>should</code>, <code>may</code>가 그 사전에 없다. 이 사실은 확인하지 않았다 (리뷰 메모 6). 한국어 문서에는 이 충돌이 없다. STE100의 사전은 영어의 사전이다. 한국어에는 원칙만 옮긴다.</p>
+    <p><b>"권장"이라는 수준.</b> STE100의 절차 문장은 명령이다. "하라" 아니면 "하지 마라"다. SHOULD는 "보통은 하지만 이유가 있으면 하지 않아도 된다"다. STE100의 눈에는 모호하다. 푸는 방법: SHOULD를 쓰면 예외의 조건을 같은 곳에 적는다. 이 프로젝트의 문서 7개에는 SHOULD가 0개다. 그래서 이 충돌은 일어나지 않았다.</p>
+  </details>
+
+  <h3>전의 문서: 모든 요구가 평서문이었다</h3>
+  <p>Spec 01의 수용 기준 18개에는 RFC 2119의 키워드가 0개였다. Domain 01의 규칙 10개와 ADR 5개도 같았다. 문장은 짧고 능동태였다. STE100의 원칙은 대체로 지켰다. 빠진 것은 수준이다.</p>
+<pre class="diff wrap"><span class="ctx">| AC-1.5 | 이미 있는 이메일이면 거부한다. |</span><span class="ctx">| AC-1.7 | 어떤 결과에도 비밀번호와 비밀번호 해시가 들어 있지 않다. |</span><span class="ctx">| AC-3.4 | 다른 회원의 정보는 조회할 수 없다. 조회 대상은 항상 토큰의 주인이다. |</span><span class="ctx">- 로그인의 응답 시간이 경우마다 다를 수 있다. 이 슬라이스에서는 다루지 않는다.</span></pre>
+  <p>이 네 줄에 문제 3개가 모두 있다.</p>
+  <ol>
+    <li><b>수준이 없다.</b> AC-1.5는 MUST인가 SHOULD인가. 문장은 말하지 않는다. 읽는 사람이 "모두 MUST겠지"로 추측한다.</li>
+    <li><b>금지가 사실처럼 읽힌다.</b> AC-1.7의 "들어 있지 않다"는 지금의 상태를 말하는 문장이다. 금지의 문장이 아니다. AC-3.4의 "조회할 수 없다"는 능력의 말이다.</li>
+    <li><b>"수 있다"의 뜻이 여러 개다.</b> 마지막 줄의 "다를 수 있다"는 가능성이다. 허용(MAY)이 아니다. 한국어의 "수 있다"는 능력, 가능성, 허용을 모두 뜻한다.</li>
+  </ol>
+
+  <h3>이 문제가 이미 비용을 냈다</h3>
+  <p>구현이 spec의 틈을 두 번 만났다.</p>
+  <table class="t">
+    <tr><th>작업</th><th>spec의 문장</th><th>구현이 정해야 했던 것</th></tr>
+    <tr><td>4 (가입)</td><td>AC-1.1 "올바른 값으로 가입하면 회원이 생긴다"</td><td>300자인 사용자 이름은 "올바른 값"인가. 아무도 정하지 않았다. DB가 500으로 답했다</td></tr>
+    <tr><td>5 (로그인)</td><td>AC-2.4 "비어 있거나"</td><td>5자인 비밀번호는? 공백 3개는? AI가 정했다 (401)</td></tr>
+  </table>
+  <p>문서 7개의 역할은 이렇다. 뒤의 절에서 이 구분이 다시 나온다.</p>
+  <table class="t">
+    <tr><th>문서</th><th>말하는 것</th><th>요구의 수</th></tr>
+    <tr><td>Spec 01</td><td>무엇을 만드는가</td><td>수용 기준 18개 (지금은 19개)</td></tr>
+    <tr><td>Domain 01</td><td>무엇이 깨지면 안 되는가</td><td>규칙 10개</td></tr>
+    <tr><td>ADR-0001 ~ 0005</td><td>어떻게 만드는가</td><td>결정의 목록</td></tr>
+  </table>
+  <p>질문은 이것이다: 말투만 바꾸는 일이 코드에 무엇을 하는가.</p>
+</section>
+
+<section id="idea">
+  <h2>2. 한 문장으로</h2>
+  <p class="intuition">요구의 문장마다 "누가 하는가"와 "예외가 없는가"를 적게 하면, 문서가 답하지 않은 곳이 드러난다.</p>
+  <p>평서문은 주어와 수준을 빼고도 쓸 수 있다. "이미 있는 이메일이면 거부한다." 누가 거부하는가. 꼭 거부하는가. 문장은 말하지 않아도 문법에 맞다. "시스템은 <b>반드시</b> 가입을 거부<b>해야 한다</b>"로 쓰려면 두 질문에 답해야 한다. 답이 없는 문장은 쓸 수 없다. 그래서 다시 쓰는 일이 리뷰가 된다.</p>
+  <p>그 뒤에 두 번째 일이 생긴다. MUST는 어긴 것을 결함으로 만든다. 평서문의 문서에서 "500의 본문이 Problem Details가 아니다"는 리뷰 메모였다. MUST의 문서에서는 같은 사실이 결함이다. 사실은 그대로다. 무게가 바뀐다.</p>
+  <figure>
+    <svg viewBox="0 0 760 210" role="img" aria-label="평서문에서 결함까지의 흐름">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-head"/></marker></defs>
+      <rect x="6" y="60" width="130" height="64" rx="8" class="d-box"/>
+      <text x="71" y="88" text-anchor="middle" class="d-lbl">평서문</text>
+      <text x="71" y="106" text-anchor="middle" class="d-sub">"거부한다"</text>
+      <rect x="176" y="20" width="190" height="144" rx="8" class="d-gate"/>
+      <text x="271" y="44" text-anchor="middle" class="d-lbl">다시 쓰는 규칙 4개</text>
+      <text x="190" y="68" class="d-sub">① 주어를 적는다</text>
+      <text x="190" y="90" class="d-sub">② 수준의 키워드를 적는다</text>
+      <text x="190" y="112" class="d-sub">③ 한 문장에 요구 하나</text>
+      <text x="190" y="134" class="d-sub">④ "수 있다"는 허용만</text>
+      <rect x="406" y="60" width="150" height="64" rx="8" class="d-member"/>
+      <text x="481" y="88" text-anchor="middle" class="d-lbl">MUST의 문장</text>
+      <text x="481" y="106" text-anchor="middle" class="d-sub">"반드시 거부해야 한다"</text>
+      <rect x="596" y="8" width="158" height="46" rx="8" class="d-box"/>
+      <text x="675" y="28" text-anchor="middle" class="d-sub">뜻을 골라야 하는 곳</text>
+      <text x="675" y="44" text-anchor="middle" class="d-txt">9곳</text>
+      <rect x="596" y="69" width="158" height="46" rx="8" class="d-box"/>
+      <text x="675" y="89" text-anchor="middle" class="d-sub">어긋난 코드와 테스트</text>
+      <text x="675" y="105" text-anchor="middle" class="d-txt">코드 2, 이름 23</text>
+      <rect x="596" y="130" width="158" height="46" rx="8" class="d-box"/>
+      <text x="675" y="150" text-anchor="middle" class="d-sub">문서에 없던 결정</text>
+      <text x="675" y="166" text-anchor="middle" class="d-txt">길이의 상한</text>
+      <line x1="136" y1="92" x2="174" y2="92" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="366" y1="92" x2="404" y2="92" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="556" y1="80" x2="594" y2="34" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="556" y1="92" x2="594" y2="92" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="556" y1="104" x2="594" y2="150" class="d-arrow" marker-end="url(#ah)"/>
+      <text x="380" y="198" text-anchor="middle" class="d-sub">왼쪽은 문서의 일이다 (스텝 42, 43). 오른쪽은 그 문서가 찾은 것이다 (스텝 42 ~ 45).</text>
+    </svg>
+    <figcaption>말투의 변경이 세 가지를 찾는다. 4절이 이 순서로 간다.</figcaption>
+  </figure>
+</section>
+
+<section id="explore">
+  <h2>3. 직접 넣어 보기</h2>
+  <p>수용 기준 19개와 도메인 규칙 10개의 전과 후의 문장이다. ID를 고르면 같은 검사가 두 문장에 돈다. 먼저 <b>AC-3.4</b>를 누르기 전에 예측한다: 수준의 칸은 MUST NOT이다. 그 문장에 "반드시"가 있는가.</p>
+  <div class="widget">
+    <div class="live">
+      <div id="w-ids" class="w-samples"></div>
+      <p class="w-cap">전 (5b62ad1)</p>
+      <pre id="w-old" class="w-pre"></pre>
+      <table class="t readout" id="w-old-r"></table>
+      <p class="w-cap">후 (작업 트리)</p>
+      <pre id="w-new" class="w-pre"></pre>
+      <table class="t readout" id="w-new-r"></table>
+      <p class="w-cap">직접 쓴 문장을 검사한다</p>
+      <div class="w-grid"><label>문장 <input id="w-free" type="text" autocomplete="off" spellcheck="false" value="비밀번호는 12자 이상일 수 있다."></label></div>
+      <table class="t readout" id="w-free-r"></table>
+    </div>
+    <div class="static-fallback">
+      <table class="t readout">
+        <tr><th>ID</th><th>문장</th><th>반드시</th><th>절대</th><th>수 있다 / 수 없다</th><th>읽히는 수준</th></tr>
+        <tr><td>AC-1.7 전</td><td>어떤 결과에도 비밀번호와 비밀번호 해시가 들어 있지 않다.</td><td>0</td><td>0</td><td>0</td><td>수준이 없다</td></tr>
+        <tr><td>AC-1.7 후</td><td>시스템은 어떤 결과에도 비밀번호와 비밀번호 해시를 **절대** 넣어**서는 안 된다**.</td><td>0</td><td>1</td><td>0</td><td>MUST NOT</td></tr>
+        <tr><td>AC-3.4 전</td><td>다른 회원의 정보는 조회할 수 없다. 조회 대상은 항상 토큰의 주인이다.</td><td>0</td><td>0</td><td>1</td><td>수준이 없다</td></tr>
+        <tr><td>AC-3.4 후</td><td>시스템은 다른 회원의 정보를 **절대** 돌려줘**서는 안 된다**. 조회의 대상은 **반드시** 토큰의 주인이**어야 한다**.</td><td>1</td><td>1</td><td>0</td><td>MUST NOT</td></tr>
+        <tr><td>AC-2.3 전</td><td>없는 이메일이면 거부한다. AC-2.2와 구분할 수 없는 결과를 준다.</td><td>0</td><td>0</td><td>0</td><td>수준이 없다</td></tr>
+        <tr><td>AC-2.3 후</td><td>이메일이 없으면 시스템은 **반드시** 로그인을 거부**해야 한다**. 이 결과의 내용은 AC-2.2의 결과의 내용과 **반드시** 같**아야 한다**. 응답 시간은 이 기준의 대상이 아니다 (&quot;받아들인 한계&quot;를 본다).</td><td>2</td><td>0</td><td>0</td><td>MUST</td></tr>
+        <tr><td>R6 전</td><td>이메일은 회원마다 다르다.</td><td>0</td><td>0</td><td>0</td><td>수준이 없다</td></tr>
+        <tr><td>R6 후</td><td>두 회원의 이메일이 **절대** 같**아서는 안 된다**.</td><td>0</td><td>1</td><td>0</td><td>MUST NOT</td></tr>
+        <tr><td>AC-1.9 전</td><td colspan="5">없다 (새로 생긴 기준이다)</td></tr>
+        <tr><td>AC-1.9 후</td><td>사용자 이름이 50자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 이메일이 254자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 두 경우에 시스템은 어느 값이 문제인지 **반드시** 알려줘**야 한다**.</td><td>3</td><td>0</td><td>0</td><td>MUST</td></tr>
+      </table>
+    </div>
+    <div class="mirrors">같은 로직: 스텝 42와 43에서 문서를 검사한 스크립트의 정규식 4개와 "표의 수준과 문장의 키워드가 맞는가"의 판정. 문장은 <code>git show 5b62ad1:…</code>와 작업 트리의 파일에서 읽었다. 이 위젯의 결과 57개를 원래의 Python 판정과 대조했다. 이 검사는 낱말만 센다. 뜻은 보지 않는다 (리뷰 메모 4).</div>
+  </div>
+  <p>알아챌 것 4개:</p>
+  <ul>
+    <li>전의 문장은 28개가 모두 "수준이 없다"다. AC-3.4에만 "수 없다"가 있다.</li>
+    <li>후의 문장에서 "수 있다"와 "수 없다"는 0개다. 요구가 모두 MUST나 MUST NOT이어서 MAY가 나올 자리가 없다.</li>
+    <li>AC-2.4에는 "반드시"가 4개다. "A이거나 B이면"을 나눈 결과다. 테스트의 수와 가까워진다.</li>
+    <li>AC-1.9에는 전의 문장이 없다. 스텝 45에서 생겼다 (4절의 단계 7).</li>
+  </ul>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 변경을 순서대로 읽기</h2>
+  <p>단계 1 ~ 4는 문서를 다시 쓴 일이다. 단계 5 ~ 7은 그 문서가 찾은 것이다.</p>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 읽는 법을 문서의 머리에 적는다</h3>
+    <p class="why">키워드는 뜻을 정한 뒤에만 쓸 수 있다. "수 있다"를 허용으로만 쓰려면 그 약속을 먼저 적어야 한다.</p>
+    <p class="file-role"><b>docs/spec/01-member-signup-login.md</b> — "무엇을 만드는가"의 문서. 새 절이 생겼다.</p>
+<pre class="diff wrap"><span class="add">## 이 문서를 읽는 법</span><span class="add"></span><span class="add">굵게 쓴 아래의 말은 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)의 뜻으로 쓴다.</span><span class="add"></span><span class="add">| 말 | RFC 2119 | 뜻 |</span><span class="add">|---|---|---|</span><span class="add">| **반드시 ~해야 한다** | MUST | 예외가 없는 요구다. |</span><span class="add">| **절대 ~해서는 안 된다** | MUST NOT | 예외가 없는 금지다. |</span><span class="add">| **~하는 것을 권장한다** | SHOULD | 이유가 있으면 따르지 않아도 된다. 그 이유를 적는다. |</span><span class="add">| **~할 수 있다** | MAY | 허용이다. 해도 되고 하지 않아도 된다. |</span><span class="add"></span><span class="add">- 이 문서는 "~할 수 있다"를 허용의 뜻으로만 쓴다. 능력이나 가능성을 말할 때는 다른 말을 쓴다.</span><span class="add">- 굵은 말이 없는 문장은 요구가 아니다. 설명이다.</span><span class="add">- "시스템"은 이 슬라이스가 만드는 백엔드다.</span><span class="add">- "결과"는 시스템이 요청에 돌려주는 내용이다. 성공의 결과와 거부의 결과가 모두 들어간다.</span><span class="add">- "거부한다"는 두 가지를 뜻한다. 시스템은 요청한 일을 하지 않는다. 시스템은 거부한 것을 결과로 알려준다.</span></pre>
+    <ul>
+      <li>표의 아래의 다섯 줄이 중요하다. "굵은 말이 없는 문장은 요구가 아니다"가 요구와 설명을 가른다. RFC 2119는 키워드를 아껴 쓰라고 한다. 용어의 표, 범위 밖, 근거에는 키워드를 넣지 않았다.</li>
+      <li>"시스템", "결과", "거부한다"의 뜻은 전에 없었다. 주어를 적으려니 주어의 이름이 필요했다. "거부한다"의 뜻은 AI가 골랐다 (단계 5).</li>
+      <li>Domain 01과 ADR 5개의 머리에는 한 줄만 있다. 표는 여기 한 곳에만 있다.</li>
+    </ul>
+    <p class="bridge">낱말의 뜻이 정해졌다. 이제 문장을 바꾼다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 수용 기준을 다시 쓴다</h3>
+    <p class="why">규칙 4개를 18개의 문장에 적용한다. 규칙마다 대표 하나를 본다.</p>
+    <p class="file-role"><b>docs/spec/01-member-signup-login.md</b> — 표에 "수준"의 열이 생겼다. ID는 그대로다. 테스트의 이름이 ID를 쓴다.</p>
+    <p><b>규칙 ①② 주어와 키워드.</b> 금지는 MUST NOT으로 쓴다. 부정의 평서문으로 쓰지 않는다.</p>
+<pre class="diff wrap"><span class="del">| AC-1.7 | 어떤 결과에도 비밀번호와 비밀번호 해시가 들어 있지 않다. |</span><span class="add">| AC-1.7 | MUST NOT | 시스템은 어떤 결과에도 비밀번호와 비밀번호 해시를 **절대** 넣어**서는 안 된다**. |</span><span class="del">| AC-3.4 | 다른 회원의 정보는 조회할 수 없다. 조회 대상은 항상 토큰의 주인이다. |</span><span class="add">| AC-3.4 | MUST NOT | 시스템은 다른 회원의 정보를 **절대** 돌려줘**서는 안 된다**. 조회의 대상은 **반드시** 토큰의 주인이**어야 한다**. |</span></pre>
+    <p><b>규칙 ③ 한 문장에 요구 하나.</b> "A이거나 B이면"은 두 문장이 된다.</p>
+<pre class="diff wrap"><span class="del">| AC-1.4 | 비밀번호가 8자보다 짧거나, UTF-8로 72바이트보다 길면 거부한다. |</span><span class="add">| AC-1.4 | MUST | 비밀번호가 8자보다 짧으면 시스템은 **반드시** 가입을 거부**해야 한다**. 비밀번호가 UTF-8로 72바이트보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. |</span><span class="del">| AC-2.4 | 이메일이나 비밀번호가 비어 있거나, 이메일의 형식이 틀리면 거부한다. 값의 오류로 알려준다. AC-2.2와 다른 결과다. |</span><span class="add">| AC-2.4 | MUST | 이메일이나 비밀번호가 비어 있으면 시스템은 **반드시** 로그인을 거부**해야 한다**. 이메일의 형식이 틀리면 시스템은 **반드시** 로그인을 거부**해야 한다**. 두 경우에 시스템은 값의 오류로 **반드시** 알려줘**야 한다**. 이 결과는 AC-2.2의 결과와 **반드시** 달라**야 한다**. |</span></pre>
+    <p><b>규칙 ④ "수 있다"는 허용만.</b> 가능성은 다른 말로 쓴다.</p>
+<pre class="diff wrap"><span class="del">- 로그인의 응답 시간이 경우마다 다를 수 있다. 이 슬라이스에서는 다루지 않는다.</span><span class="add">- 로그인의 응답 시간은 경우마다 다른 경우가 있다. 이 spec은 응답 시간을 요구하지 않는다.</span><span class="del">3. 가입은 토큰을 주지 않는다.</span><span class="add">3. 시스템은 가입의 결과에 액세스 토큰을 **절대** 넣어**서는 안 된다**.</span></pre>
+    <ul>
+      <li>AC-3.4의 칸은 MUST NOT이다. 그러나 문장이 둘이다. 둘째 문장은 MUST다. 수준의 열은 "첫 요구의 수준"을 적는다. 열 하나로 문장 둘을 다 말하지 못한다.</li>
+      <li>"확정한 가정"의 1, 2, 3에도 키워드를 넣었다. 가정 3은 평서문에서 MUST NOT이 됐다. 이것도 뜻을 고른 곳이다 (단계 5).</li>
+      <li>결과: MUST가 16개, MUST NOT이 2개 (AC-1.7, AC-3.4). SHOULD와 MAY는 0개다. 원래의 문장에 "권장"과 "허용"의 뜻이 없었다. 새로 만들지 않았다.</li>
+    </ul>
+    <p class="bridge">"무엇을 한다"의 문서가 끝났다. 다음은 "무엇이 깨지면 안 된다"의 문서다. 수준의 분포가 다르게 나온다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 도메인 규칙을 다시 쓴다</h3>
+    <p class="why">같은 규칙 4개다. 도메인의 규칙은 불변식이다. 금지가 많이 나온다.</p>
+    <p class="file-role"><b>docs/domain/01-member.md</b> — 용어와 규칙 R1 ~ R10의 문서.</p>
+<pre class="diff wrap"><span class="del">| R6 | 이메일은 회원마다 다르다. | 가입 |</span><span class="add">| R6 | MUST NOT | 두 회원의 이메일이 **절대** 같**아서는 안 된다**. | 가입 |</span><span class="del">| R9 | 로그인이 실패하면 이유(없는 이메일, 틀린 비밀번호)를 구분하지 않는다. | 로그인 |</span><span class="add">| R9 | MUST NOT | 로그인이 실패하면 로그인은 이유(없는 이메일, 틀린 비밀번호)를 **절대** 구분**해서는 안 된다**. | 로그인 |</span><span class="del">| R10 | 회원은 자기의 정보만 조회한다. | 조회 |</span><span class="add">| R10 | MUST NOT | 조회는 회원에게 다른 회원의 정보를 **절대** 돌려줘**서는 안 된다**. 회원은 자기의 정보만 조회한다. | 조회 |</span></pre>
+    <table class="t">
+      <tr><th></th><th>MUST</th><th>MUST NOT</th></tr>
+      <tr><td>Spec 01 (수용 기준 18개)</td><td>16</td><td>2</td></tr>
+      <tr><td>Domain 01 (규칙 10개)</td><td>5</td><td>5 (R5, R6, R7, R9, R10)</td></tr>
+    </table>
+    <ul>
+      <li>R6의 전의 문장 "이메일은 회원마다 다르다"는 사실의 서술이다. 후의 문장은 "두 회원의 이메일이 같아서는 안 된다"다. 깨지면 안 되는 것을 직접 말한다.</li>
+      <li>수준의 열이 두 문서의 성격을 보여 준다. spec은 할 일을 말한다. 도메인은 금지가 반이다.</li>
+    </ul>
+    <p>용어의 규칙도 MUST NOT이 됐다. 여기서 문서의 결함이 하나 나왔다.</p>
+<pre class="diff wrap"><span class="del">쓰지 않는 말: "유저", "사용자"(회원으로 쓴다), "계정", "닉네임"(사용자 이름으로 쓴다).</span><span class="add">회원과 사용자 이름을 가리킬 때 아래의 말은 **절대** 써**서는 안 된다**.</span><span class="add">이 프로젝트의 문서에서 혼자 쓴 "사용자"는 회원이 아니다. 프로젝트를 이끄는 사람이다 (예: "사용자가 승인했다").</span></pre>
+    <ul>
+      <li>처음에는 "아래의 말은 절대 써서는 안 된다"로 썼다. 그러면 ADR의 "사용자가 승인했다"가 규칙을 어긴다. 평서문("쓰지 않는 말")일 때는 아무도 이 충돌을 보지 않았다. 범위를 적었다: 회원을 가리킬 때만이다.</li>
+    </ul>
+    <p class="bridge">spec과 도메인에는 MAY가 하나도 없다. "어떻게"의 문서에서 처음 나온다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>단계 4 — ADR 5개를 다시 쓴다</h3>
+    <p class="why">ADR은 절이 넷이다: 맥락, 결정, 결과, 버린 대안. 요구는 "결정"에만 있다. 키워드도 거기에만 넣는다.</p>
+    <p class="file-role"><b>docs/adr/0002-hexagonal-architecture.md</b> — 의존의 방향의 규칙. MAY가 처음 나온다.</p>
+<pre class="diff wrap"><span class="del">| 패키지 | 내용 | 의존해도 되는 것 |</span><span class="add">| 패키지 | 내용 | 의존**할 수 있다** (MAY) |</span><span class="del">1. `domain`은 `application`과 `adapter`에 의존하지 않는다.</span><span class="add">| 1 | MUST NOT | `domain`은 `application`과 `adapter`에 **절대** 의존**해서는 안 된다**. |</span><span class="del">`application`은 Spring을 쓰지 않는다. 유스케이스는 기본 패키지의 `UseCaseConfig`가 빈으로 등록한다. 유스케이스가 던지는 예외는 들어오는 포트의 패키지에 둔다. 웹 어댑터가 그것을 알아야 하기 때문이다.</span><span class="add">- `application`은 Spring을 **절대** 써**서는 안 된다**.</span></pre>
+    <ul>
+      <li>"의존해도 되는 것"은 허용이다. MAY의 정확한 자리다. 규칙 1 ~ 4(MUST NOT)의 반대쪽이다.</li>
+      <li>셋째 줄을 기억해 둔다. "<code>application</code>은 Spring을 절대 써서는 안 된다"는 ArchUnit의 규칙 1 ~ 5에 없다. 단계 6에서 다시 나온다.</li>
+    </ul>
+    <p class="file-role"><b>docs/adr/0004-verification-tdd.md</b> — 테스트의 규칙. 가장 짧은 ADR이다.</p>
+<pre class="diff wrap"><span class="del">테스트를 먼저 쓴다. 테스트는 세 종류다.</span><span class="add">테스트를 **반드시** 구현보다 먼저 써**야 한다**. 테스트는 세 종류다.</span><span class="del">- 테스트의 이름에 AC나 R의 ID를 넣는다. 수용 기준 하나에 테스트가 하나 이상 있다.</span><span class="add">- 테스트의 이름에는 ID를 **반드시** 넣**어야 한다**. ID는 테스트가 검증하는 문장의 것이다: 수용 기준(`ac1_1_`), 도메인 규칙(`r1_`), ADR-0002의 규칙(`rule1_`), 다른 ADR의 결정(`adr0003_`).</span></pre>
+    <ul>
+      <li>첫 줄: 작업 5에서 유스케이스와 어댑터는 이 규칙을 지키지 않았다. 평서문일 때는 일지의 한 줄이었다. MUST가 되니 규칙의 위반이다.</li>
+      <li>둘째 줄: 후의 문장은 단계 6에서 한 번 더 고친 것이다. 처음에는 "AC나 R의 ID를 반드시"였다. 그 문장은 전부터 있던 <code>rule1_…</code>과 <code>adr0005_…</code>를 위반으로 만들었다.</li>
+    </ul>
+    <p class="file-role"><b>docs/adr/0003-authentication.md</b> — 인증의 결정. 목록이 길어서 주제 6개로 묶었다. "서명 키"의 묶음을 본다.</p>
+<pre class="diff wrap"><span class="add">서명 키:</span><span class="add"></span><span class="add">- 서버는 서명 키를 **반드시** 설정 `trealworld.jwt.secret`에서 읽**어야 한다**.</span><span class="add">- 서명 키는 **반드시** UTF-8로 32바이트 이상이**어야 한다**. 더 짧으면 서버는 시작을 **반드시** 거부**해야 한다**.</span><span class="add">- 저장소에 실제 키를 **절대** 넣어**서는 안 된다**.</span><span class="add">- 서명 키가 없으면 서버는 시작할 때 임의의 키를 **반드시** 만들**어야 한다**. 서버는 경고를 **반드시** 남겨**야 한다**. 이 경우에 서버를 다시 시작하면 발급한 토큰은 모두 무효가 된다.</span><span class="add">- 서버가 여러 대이면 서명 키를 **반드시** 설정**해야 한다**.</span></pre>
+    <table class="t">
+      <tr><th>ADR</th><th>반드시</th><th>절대</th><th>MAY</th></tr>
+      <tr><td>0001 기술 스택</td><td>5</td><td>1</td><td>0</td></tr>
+      <tr><td>0002 헥사고날</td><td>8</td><td>7</td><td>2</td></tr>
+      <tr><td>0003 인증</td><td>24</td><td>4</td><td>1</td></tr>
+      <tr><td>0004 TDD</td><td>6</td><td>1</td><td>0</td></tr>
+      <tr><td>0005 API 규약</td><td>9</td><td>6</td><td>0</td></tr>
+    </table>
+    <ul>
+      <li>ADR-0003의 MUST가 가장 많다. 보안의 결정은 예외를 두기 어렵다. 그러나 24개가 모두 같은 무게인지는 묻지 않았다 (리뷰 메모 5).</li>
+      <li>"맥락", "결과", "버린 대안"에는 키워드가 없다. 문장만 다듬었다. 예: "취소할 수 없다" → "취소하지 못한다".</li>
+      <li>ADR-0001과 ADR-0005는 표(스택, 경로)의 위에 MUST인 문장을 하나 두었다. 칸마다 키워드를 넣지 않았다.</li>
+    </ul>
+    <p class="bridge">문서 7개가 같은 규칙을 따른다. 그런데 "뜻은 바꾸지 않았다"가 사실인가. 다음 단계가 그것을 본다.</p>
+  </div>
+
+  <div class="step" id="step5">
+    <h3>단계 5 — 리뷰: 뜻이 좁아진 곳을 센다</h3>
+    <p class="why">흐린 문장을 분명하게 쓰려면 뜻을 하나 골라야 한다. 고른 사람은 AI다. 그래서 고른 곳을 모두 적었다.</p>
+    <table class="t">
+      <tr><th>곳</th><th>전</th><th>후</th><th>근거</th></tr>
+      <tr><td>AC-2.3</td><td>"구분할 수 없는 결과를 준다"</td><td>"결과의 내용은 반드시 같아야 한다. 응답 시간은 대상이 아니다"</td><td>같은 문서의 "받아들인 한계"</td></tr>
+      <tr><td>R3</td><td>"비어 있지 않다"</td><td>"한 자 이상. 길이는 공백을 지운 뒤에 센다"</td><td>코드(<code>Username</code>)와 테스트</td></tr>
+      <tr><td>"거부한다"</td><td>뜻이 없었다</td><td>"요청한 일을 하지 않는다. 거부한 것을 결과로 알려준다"</td><td>모든 AC의 테스트</td></tr>
+      <tr><td>가정 3</td><td>"가입은 토큰을 주지 않는다"</td><td>MUST NOT</td><td>"원본과 다른 점"의 표</td></tr>
+      <tr><td>ADR-0001</td><td>"의존성은 쓰는 작업에서 더한다" (결과)</td><td>MUST, "이 문서에 반드시 적어야 한다" (결정)</td><td>작업 2, 4, 5에서 한 일</td></tr>
+      <tr><td>ADR-0001</td><td>"Bean Validation은 쓰지 않는다" (결과)</td><td>MUST NOT (결정)</td><td>작업 4의 결정</td></tr>
+      <tr><td>ADR-0002</td><td>"JPA 애너테이션을 직접 붙인다"</td><td>"붙일 수 있다" (MAY)</td><td>규칙의 핵심은 "따로 두지 않는다"다</td></tr>
+      <tr><td>ADR-0003</td><td>"32바이트 이상이어야 한다"</td><td>"더 짧으면 시작을 반드시 거부해야 한다"를 더했다</td><td>지금의 코드</td></tr>
+      <tr><td>ADR-0004</td><td>표의 설명 "Spring 없이 돈다"</td><td>"Spring을 절대 써서는 안 된다"</td><td>표와 plan의 작업 3</td></tr>
+    </table>
+    <p>대표 하나를 본다. AC-2.3의 "구분할 수 없는"은 응답 시간도 포함하는가. 같은 문서가 "응답 시간은 다루지 않는다"고 했다. 그래서 두 문장을 하나로 모았다.</p>
+<pre class="diff wrap"><span class="del">| AC-2.3 | 없는 이메일이면 거부한다. AC-2.2와 구분할 수 없는 결과를 준다. |</span><span class="add">| AC-2.3 | MUST | 이메일이 없으면 시스템은 **반드시** 로그인을 거부**해야 한다**. 이 결과의 내용은 AC-2.2의 결과의 내용과 **반드시** 같**아야 한다**. 응답 시간은 이 기준의 대상이 아니다 ("받아들인 한계"를 본다). |</span></pre>
+    <ul>
+      <li>후의 문장은 이미 있는 테스트(<code>ac2_3_an_email_that_does_not_exist_cannot_be_told_from_a_wrong_password</code>)와 같은 것을 말한다. 그 테스트는 두 응답의 본문을 글자로 비교한다. 이 경우에는 테스트가 spec보다 먼저 분명했다.</li>
+      <li><b>고르지 않은 곳</b>이 있다. AC-1.2와 AC-2.4의 "비어 있으면"이다. 뜻을 적지 않았다. 작업 5에서 AI가 정한 것(공백 3개인 비밀번호는 401)이 아직 승인을 받지 않았기 때문이다 (리뷰 메모 1).</li>
+      <li>9곳의 근거는 모두 "지금의 코드나 테스트가 이미 그렇다"다. 문서가 코드를 따라갔다. 방향이 거꾸로다. 이것이 맞는지는 승인이 정한다 (리뷰 메모 2).</li>
+    </ul>
+    <p class="bridge">이제 방향을 바로 놓는다. 문서를 기준으로 코드를 본다.</p>
+  </div>
+
+  <div class="step" id="step6">
+    <h3>단계 6 — 리뷰: 문서를 기준으로 코드와 테스트를 대조한다</h3>
+    <p class="why">MUST는 "어기면 결함"이라는 뜻이다. 그러면 MUST마다 "지금 지키는가"와 "무엇이 지키게 하는가"를 물을 수 있다.</p>
+    <p>방법: 문서 7개의 굵은 문장을 하나씩 읽고 <code>grep</code>으로 사실을 모았다. 테스트의 이름, 패키지마다의 import, 인터페이스의 위치, 보안 라이브러리의 위치, 시각을 읽는 곳, 금지된 용어. 결과는 세 종류다.</p>
+    <table class="t">
+      <tr><th>종류</th><th>수</th><th>뜻</th></tr>
+      <tr><td>A. 코드가 문서를 어긴다</td><td>2</td><td>결함이다. 코드를 고친다</td></tr>
+      <tr><td>B. 테스트가 문서를 어긴다</td><td>23 (이름)</td><td>ADR-0004의 "이름에 ID"</td></tr>
+      <tr><td>C. 지킨다. 그러나 강제하는 테스트가 없다</td><td>8</td><td>조심해서 지킨 것이다. 테스트를 더한다</td></tr>
+    </table>
+
+    <p><b>A-1.</b> ADR-0005: "오류의 본문은 <b>반드시</b> Problem Details 형식이어야 한다." 예상하지 못한 오류(500)는 Spring Boot의 기본 본문이었다.</p>
+    <p class="file-role"><b>src/main/java/trealworld/adapter/web/ApiExceptionHandler.java</b> — 예외를 HTTP 응답으로 바꾸는 곳.</p>
+<pre class="diff"><span class="skip">… -42,3 +42,13 …</span><span class="ctx">	}</span><span class="ctx"></span><span class="add">	/**</span><span class="add">	 * 예상하지 못한 오류 → 500. 본문은 같은 형식이다. (ADR-0005)</span><span class="add">	 * 원인은 로그에만 남긴다. 본문에 넣지 않는다. 원인의 글에 저장된 값이 들어 있는 경우가 있다. (AC-1.7)</span><span class="add">	 */</span><span class="add">	@ExceptionHandler(Exception.class)</span><span class="add">	ProblemDetail unexpected(Exception exception) {</span><span class="add">		logger.error("예상하지 못한 오류", exception);</span><span class="add">		return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 오류가 났다");</span><span class="add">	}</span><span class="add"></span><span class="ctx">}</span></pre>
+    <ul>
+      <li>본문의 글은 고정이다. 예외의 메시지를 넣지 않는다. DB의 오류의 글에는 저장하려던 값(비밀번호 해시)이 들어 있는 경우가 있다. AC-1.7은 "어떤 결과에도"다. 500도 결과다.</li>
+      <li>테스트 2개가 이것을 본다 (<code>ApiExceptionHandlerTests</code>). 유스케이스를 가짜로 바꿔서 오류를 만든다.</li>
+    </ul>
+
+    <p><b>A-2.</b> ADR-0002: "유스케이스가 던지는 예외는 <b>반드시</b> 들어오는 포트의 패키지에 두어야 한다."</p>
+    <p class="file-role"><b>src/main/java/trealworld/application/service/RegisterMemberService.java</b> — 가입의 유스케이스.</p>
+<pre class="diff"><span class="skip">… -49,5 +49,6 …</span><span class="ctx">			// 확인과 저장의 사이에 다른 가입이 같은 값을 저장했다. 어느 값인지 다시 묻는다.</span><span class="ctx">			rejectDuplicate(email, username);</span><span class="del">			throw exception;</span><span class="add">			// 중복이 아니다. 숨기지 않는다. 나가는 포트의 예외는 유스케이스의 밖으로 내보내지 않는다. (ADR-0002)</span><span class="add">			throw new IllegalStateException("회원을 저장하지 못했다", exception);</span><span class="ctx">		}</span><span class="ctx">	}</span></pre>
+    <ul>
+      <li><code>MemberNotUniqueException</code>은 <code>port.out</code>의 예외다. 유스케이스의 밖으로 나가면 웹 어댑터가 나가는 포트의 타입을 만난다. 원인(cause)으로 남기고 감쌌다.</li>
+    </ul>
+
+    <p><b>C.</b> 지키고 있었지만 테스트가 없던 문장들이다. 단계 4에서 기억해 둔 "<code>application</code>은 Spring을 절대 써서는 안 된다"가 여기에 있다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/ArchitectureTests.java</b> — 전에는 ADR-0002의 규칙 1 ~ 5만 있었다. 8개를 더했다. 그중 2개를 본다.</p>
+<pre class="diff"><span class="skip">… ArchitectureTests.java — 앞의 90줄 …</span><span class="add">	/** application은 Spring을 쓰지 않는다. 이 규칙이 그것도 지킨다. */</span><span class="add">	@Test</span><span class="add">	void adr0002_application_depends_only_on_java_and_domain() {</span><span class="add">		classes().that().resideInAPackage(APPLICATION)</span><span class="add">				.should().onlyDependOnClassesThat().resideInAnyPackage(APPLICATION, DOMAIN, "java..")</span><span class="add">				.as("ADR-0002: application은 domain에만 의존할 수 있다. Spring을 쓰지 않는다")</span><span class="add">				.check(classes);</span><span class="add">	}</span><span class="skip">… ArchitectureTests.java — 뒤의 54줄 …</span><span class="skip">… ArchitectureTests.java …</span><span class="add">	@Test</span><span class="add">	void adr0004_every_test_name_has_an_id() {</span><span class="add">		methods().that().areAnnotatedWith(Test.class).or().areAnnotatedWith(ParameterizedTest.class)</span><span class="add">				.should().haveNameMatching("(ac\\d_\\d|r\\d+|rule\\d|adr\\d{4})_.+")</span><span class="add">				.as("ADR-0004: 테스트의 이름에는 AC, R, ADR의 ID가 있다")</span><span class="add">				.check(testClasses);</span><span class="add">	}</span><span class="skip">… ArchitectureTests.java — 뒤의 2줄 …</span></pre>
+    <ul>
+      <li>첫째: 허용의 표(MAY)를 테스트로 옮겼다. "<code>application</code>은 <code>domain</code>과 Java에만 의존할 수 있다." 허용의 밖은 모두 금지다. Spring의 금지가 이 안에 들어 있다.</li>
+      <li>둘째: <b>B</b>를 고친 방법이다. 이름 23개를 고치고, 이름의 규칙을 테스트로 만들었다. 전에는 사람이 지켰고 23개가 빠졌다. 이제 ID가 없는 테스트를 더하면 빌드가 실패한다.</li>
+      <li>새 테스트의 이름은 <code>adr</code>로 시작한다. ADR-0002의 규칙 1 ~ 5(<code>rule</code>)에 번호를 더하지 않았다. 그 목록은 승인된 것이다.</li>
+    </ul>
+
+    <p><b>테스트는 결함을 잡는가.</b> 테스트가 통과한다는 것은 "지금 지킨다"만 말한다. 코드를 16가지로 틀리게 바꾸고 전체 테스트를 돌렸다. 16가지를 모두 잡았다.</p>
+    <table class="t">
+      <tr><th>넣은 결함</th><th>잡은 테스트</th></tr>
+      <tr><td>로그인이 비밀번호를 확인하지 않는다</td><td>수용 7, 유스케이스 2</td></tr>
+      <tr><td>공백뿐인 비밀번호를 값의 오류로 본다</td><td>수용 1, 유스케이스 1</td></tr>
+      <tr><td>짧은 비밀번호를 값의 오류로 알린다</td><td>수용 4, 유스케이스 3</td></tr>
+      <tr><td>없는 이메일을 다른 예외로 알린다</td><td>수용 2, 유스케이스 1</td></tr>
+      <tr><td>토큰의 유효 시간이 2시간이다</td><td>토큰 1</td></tr>
+      <tr><td>토큰에 <code>iat</code>를 넣는다</td><td>토큰 1</td></tr>
+      <tr><td>토큰의 시각을 <code>Clock</code>에서 읽지 않는다</td><td>아키텍처 1, 토큰 1</td></tr>
+      <tr><td>해시의 확인이 항상 참이다</td><td>해시 3, 수용 7</td></tr>
+      <tr><td>401의 본문에 <code>errors</code>를 넣는다</td><td>수용 1 (이번에 더한 한 줄)</td></tr>
+      <tr><td>500의 본문에 원인을 넣는다</td><td>웹 1</td></tr>
+      <tr><td>500의 처리를 지운다</td><td>웹 1</td></tr>
+      <tr><td>로그인의 응답에 값을 더한다</td><td>수용 1</td></tr>
+      <tr><td><code>application</code>이 Spring을 쓴다</td><td>아키텍처 1</td></tr>
+      <tr><td><code>domain</code>에 인터페이스를 둔다</td><td>아키텍처 1</td></tr>
+      <tr><td>테스트의 이름에 ID가 없다</td><td>아키텍처 1</td></tr>
+      <tr><td>나가는 포트의 예외가 유스케이스의 밖으로 나간다</td><td>유스케이스 1</td></tr>
+    </table>
+    <p>대조는 문서의 결함도 찾았다. 3곳이다: ADR-0004의 "AC나 R의 ID"(좁았다), ADR-0005의 실패의 표(500이 없었다), Domain 01의 "사용자"(단계 3). 문서 → 코드의 한 방향이 아니다.</p>
+    <p class="bridge">고치지 않은 어긋남이 하나 남았다. 코드를 고쳐서 닫을 수 없는 것이다.</p>
+  </div>
+
+  <div class="step" id="step7">
+    <h3>단계 7 — 문서에 없던 결정을 채운다: 길이의 상한</h3>
+    <p class="why">AC-1.1의 새 문장은 "값이 모두 올바르면 시스템은 <b>반드시</b> 회원을 만들어야 한다"다. 300자인 사용자 이름은 R3에 맞다. "올바른 값"이다. 그런데 가입이 500이었다. 코드는 문서대로 했다. 문서가 말하지 않은 곳에서 DB(<code>varchar(255)</code>)가 대신 답했다.</p>
+    <p>이것은 작업 4의 리뷰 메모 2였다. 8스텝 동안 "고치지 않았다"로 남아 있었다. "AC-1.1을 어긴다"로 이름이 바뀐 뒤에 결정이 나왔다. 사용자가 정했다: 사용자 이름은 50자, 이메일은 254자.</p>
+    <p class="file-role"><b>docs/domain/01-member.md</b>, <b>docs/spec/01-member-signup-login.md</b> — 규칙과 새 수용 기준.</p>
+<pre class="diff wrap"><span class="del">| R3 | 사용자 이름은 비어 있지 않다. 앞뒤 공백을 지운다. | 사용자 이름 |</span><span class="add">| R3 | MUST | 사용자 이름은 **반드시** 한 자 이상이**어야 한다**. 사용자 이름은 **반드시** 50자 이하**여야 한다**. 사용자 이름의 앞뒤 공백은 **반드시** 지워**야 한다**. 길이는 공백을 지운 뒤에 센다. | 사용자 이름 |</span><span class="add">| AC-1.9 | MUST | 사용자 이름이 50자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 이메일이 254자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 두 경우에 시스템은 어느 값이 문제인지 **반드시** 알려줘**야 한다**. |</span></pre>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Username.java</b> — 값 객체. 규칙 R3을 지키는 곳.</p>
+<pre class="diff"><span class="skip">… -4,9 +4,12 …</span><span class="ctx"></span><span class="ctx">/**</span><span class="del"> * 사용자 이름. 비어 있지 않고, 앞뒤 공백이 없다. (R3)</span><span class="add"> * 사용자 이름. 앞뒤 공백이 없다. 한 자 이상이고 50자 이하다. (R3)</span><span class="add"> * 한 자는 유니코드의 코드 포인트 하나다.</span><span class="ctx"> */</span><span class="ctx">@Embeddable</span><span class="ctx">public record Username(String value) {</span><span class="ctx"></span><span class="add">	public static final int MAX_CHARACTERS = 50;</span><span class="add"></span><span class="ctx">	public Username {</span><span class="ctx">		if (value == null || value.isBlank()) {</span><span class="skip">… -14,4 +17,7 …</span><span class="ctx">		}</span><span class="ctx">		value = value.strip();</span><span class="add">		if (value.codePointCount(0, value.length()) &gt; MAX_CHARACTERS) {</span><span class="add">			throw new IllegalArgumentException("사용자 이름은 50자 이하여야 한다");</span><span class="add">		}</span><span class="ctx">	}</span><span class="ctx"></span></pre>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Member.java</b> — 엔티티. 열의 길이가 값 객체의 상수를 쓴다.</p>
+<pre class="diff"><span class="skip">… -27,9 +27,9 …</span><span class="ctx"></span><span class="ctx">	@Embedded</span><span class="del">	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true))</span><span class="add">	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true, length = Username.MAX_CHARACTERS))</span><span class="ctx">	private Username username;</span><span class="ctx"></span><span class="ctx">	@Embedded</span><span class="del">	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true))</span><span class="add">	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true, length = Email.MAX_CHARACTERS))</span><span class="ctx">	private Email email;</span><span class="ctx"></span></pre>
+    <ul>
+      <li>길이는 <code>strip()</code>의 뒤에 센다. R3이 그렇게 말한다. 앞뒤에 공백이 있는 50자는 통과한다.</li>
+      <li>한 자는 코드 포인트 하나다 (<code>codePointCount</code>). R4와 같다. 이모지 50개는 통과한다.</li>
+      <li>숫자는 값 객체에만 있다. DB의 열이 그것을 따른다. 전에는 반대였다: DB의 기본값(255)이 사실상의 규칙이었다.</li>
+      <li><code>Email.java</code>도 같은 모양이다 (254자). 5절에 있다.</li>
+    </ul>
+    <table class="t">
+      <tr><th>가입의 요청</th><th>전</th><th>후</th></tr>
+      <tr><td>300자인 사용자 이름</td><td class="no">500</td><td>400, <code>errors.username</code></td></tr>
+      <tr><td>51자인 사용자 이름</td><td>201</td><td>400</td></tr>
+      <tr><td>50자인 사용자 이름</td><td>201</td><td>201</td></tr>
+      <tr><td>255자인 이메일</td><td>201</td><td>400, <code>errors.email</code></td></tr>
+      <tr><td>254자인 이메일</td><td>201</td><td>201</td></tr>
+    </table>
+    <p>서버를 띄우고 확인한 값이다. 51자와 255자의 줄을 본다. 이 변경은 전에 되던 가입을 거부한다. 결함의 수정만이 아니다. 동작의 변경이다.</p>
+    <p class="bridge">테스트는 147개에서 168개가 됐다. 남은 것은 6절에 있다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>docs/adr/0001-tech-stack.md</code> — 스택의 표의 위에 MUST인 문장 하나. 의존성의 규칙 4개를 "결과"에서 "결정"으로 옮겼다. 더한 의존성을 표로 바꿨다.</li>
+    <li><code>docs/adr/0005-api-conventions.md</code> — 결정을 묶었다 (본문의 형식, 오류의 본문, 로그인). 실패의 표에 500을 더했다. "500의 본문에 원인을 절대 넣어서는 안 된다"를 더했다.</li>
+    <li><code>docs/domain/01-member.md</code> — R2에 "254자 이하". 두 숫자(254, 50)의 출처를 적었다. "쓰지 않는 말"을 표로 바꿨다. "계정"의 대신 쓰는 말은 "(정하지 않았다)"다.</li>
+    <li><code>docs/spec/01-member-signup-login.md</code> — 확정한 가정 5, "원본과 다른 점"의 한 줄 (길이의 상한).</li>
+    <li><code>docs/plan/01-member-slice.md</code> — 작업 4의 범위가 AC-1.9까지다. 끝의 조건이 "수용 기준 19개"다.</li>
+    <li><code>docs/journal/2026-11-17.md</code> — 스텝 42 ~ 45. +244줄.</li>
+    <li><code>src/main/java/trealworld/domain/Email.java</code> — <code>MAX_CHARACTERS = 254</code>와 길이의 검사. <code>Username.java</code>와 같은 모양이다.</li>
+    <li><code>src/test/java/trealworld/ArchitectureTests.java</code> — 단계 6에서 본 2개의 밖에 6개: Bean Validation, <code>domain</code>의 의존, <code>domain</code>의 인터페이스, 보안 라이브러리의 위치, 시각을 읽는 곳, 도메인 테스트의 Spring.</li>
+    <li><code>src/test/java/trealworld/adapter/web/ApiExceptionHandlerTests.java</code> (새 파일) — 500의 본문의 테스트 2개.</li>
+    <li>테스트의 이름에 ID를 넣은 것 (23개): <code>JwtAccessTokenIssuerTests</code> 8 (<code>adr0003_</code>), <code>LoginServiceTests</code> 4 (<code>ac2_4_</code>), <code>RegisterMemberServiceTests</code> 4, <code>PasswordHashTests</code> 2, <code>PasswordTests</code> 1, <code>UsernameTests</code> 1, <code>LoginAcceptanceTests</code> 1, <code>TrealworldApplicationTests</code> 1 (<code>contextLoads</code> → <code>adr0001_the_application_starts</code>). 나머지 1개는 <code>RegisterMemberServiceTests</code>의 테스트가 기대하는 예외도 함께 바뀐 것이다 (단계 6의 A-2).</li>
+    <li><code>LoginAcceptanceTests.java</code> — 401에 <code>errors</code>가 없다는 한 줄. 255자인 이메일의 로그인은 400이다 (새 테스트).</li>
+    <li>상한의 테스트 (11개): <code>UsernameTests</code> 4, <code>EmailTests</code> 2, <code>RegisterMemberAcceptanceTests</code> 3 (<code>ac1_9_</code>), <code>LoginAcceptanceTests</code> 1, <code>MemberPersistenceAdapterTests</code> 1.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>표시: <b>[확인]</b>은 서버나 테스트로 본 것이다. <b>[읽음]</b>은 문서나 코드에서 읽은 것이다. <b>[추정]</b>은 확인하지 않은 것이다.</p>
+  <ol>
+    <li><b>"비어 있다"에는 아직 뜻이 없다. [확인]</b> 공백 3개인 비밀번호: 가입은 400이고 로그인은 401이다. AC-1.2와 AC-2.4는 둘 다 "비어 있으면"이라고 쓴다. 다시 쓴 뒤에도 가장 흐린 낱말이다. 같은 종류가 2개 더 있다: "이메일의 형식이 틀리면", "액세스 토큰이 유효하면". 그리고 로그인의 "비밀번호가 비어 있다"는 <code>LoginService</code>가 확인한다. ADR-0001은 "값의 규칙은 반드시 <code>domain</code>에"라고 한다.</li>
+    <li><b>뜻이 좁아진 9곳은 AI가 골랐다. [확인]</b> 단계 5의 표다. 9곳의 근거가 모두 "지금의 코드가 그렇다"다. 문서의 상태의 줄에는 "뜻은 바꾸지 않았다"고 적혀 있다. 정확한 말은 "지금의 코드와 같은 뜻으로 좁혔다"다. 승인이 필요하다. 작업 5에서 AI가 더한 결정(서명 키가 없으면 임의의 키, 로그인의 400의 범위)도 MUST로 적혀 있다.</li>
+    <li><b>MUST마다 테스트가 있는지는 모두 세지 않았다. [읽음]</b> 대조는 한 번 읽은 것이다. 표가 없다. 테스트가 없는 MUST가 남아 있다. 예: ADR-0003 "서버는 경고를 반드시 남겨야 한다"(키가 없을 때), "저장소에 실제 키를 절대 넣어서는 안 된다", ADR-0001 "더한 의존성은 이 문서에 반드시 적어야 한다". 뒤의 둘은 테스트로 만들기 어렵다. 그러면 MUST가 맞는 수준인가.</li>
+    <li><b>문서의 검사는 낱말만 센다. [확인]</b> 3절의 위젯이 그 검사다. "반드시"가 문장에 있으면 MUST로 센다. 그 문장이 요구인지는 보지 않는다. 직접 쓰는 칸에 "반드시 그런 것은 아니다"를 넣어 본다. 그리고 수준의 열은 문장이 둘이면 첫 문장만 말한다 (AC-3.4).</li>
+    <li><b>SHOULD가 0개다. [읽음]</b> 문서 7개의 요구가 거의 모두 MUST나 MUST NOT이다. 전에는 "모두 평서문"이어서 수준을 구분하지 못했다. 지금은 "모두 MUST"다. 구분이 생긴 곳은 MUST와 MUST NOT의 사이, 그리고 요구와 설명의 사이다. ADR-0003의 24개가 모두 예외 없는 요구인가. 예: "JWT 라이브러리는 반드시 <code>spring-security-oauth2-jose</code>여야 한다".</li>
+    <li><b>STE100의 사전에 대한 말은 확인하지 않았다. [추정]</b> "<code>shall</code>, <code>should</code>, <code>may</code>는 허용된 낱말이 아니다"는 AI의 기억이다. 표준의 문서를 읽지 않았다. 한국어 문서에는 영향이 없다. 발표에서 이 말을 쓰려면 먼저 확인한다.</li>
+    <li><b>이메일의 254는 자의 수다. 표준의 254는 옥텟의 수다. [읽음]</b> <code>Email</code>은 코드 포인트를 센다. 이메일의 형식의 규칙(<code>[^@\s]+@…</code>)은 한글도 받는다. 한글 200자인 이메일은 254자보다 짧지만 600바이트다. Domain 01은 "254자는 SMTP 표준에서 쓰는 주소의 최대 길이다"라고 적었다. 단위가 다르다. ASCII만 쓰는 이메일에서는 같다.</li>
+    <li><b>500의 처리가 모든 예외를 잡는다. [추정]</b> <code>@ExceptionHandler(Exception.class)</code>다. 작업 6에서 Spring Security를 더하면, 컨트롤러의 안에서 나는 보안의 예외(권한 없음)가 여기에 먼저 닿아서 500이 될 가능성이 있다. 작업 6에서 401과 403의 테스트로 확인한다.</li>
+    <li><b>네 스텝이 한 작업 트리에 있다. [확인]</b> 문서 다시 쓰기(42, 43), 대조의 수정(44), 상한(45)이 커밋 하나에 들어갈 상태다. 51자인 사용자 이름을 거부하는 동작의 변경이 "문서의 말투"의 변경과 섞인다. 나누는 쪽이 리뷰하기 쉽다.</li>
+  </ol>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 규칙 하나: 다 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="b">
+      <p class="q-text">전의 spec은 문장이 짧고 능동태였다. 한 개념에 한 용어를 썼다. 그런데 왜 다시 써야 했는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">STE100의 원칙을 지키지 않았다. 문장이 길고 수동태가 많았다.</button>
+        <button type="button" data-opt="b">문장의 모양은 분명했다. 요구의 수준이 없었다. 두 표준은 다른 것을 다룬다.</button>
+        <button type="button" data-opt="c">RFC 2119는 모든 문장에 키워드를 넣으라고 한다. 평서문은 규격에 맞지 않는다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>STE100은 "무슨 뜻인가"를, RFC 2119는 "어겨도 되는가"를 다룬다. 전의 spec은 앞의 것은 대체로 지켰고 뒤의 것은 0개였다. RFC 2119는 키워드를 아껴 쓰라고 한다. 그래서 용어의 표와 근거에는 키워드가 없다.</p>
+        <a href="#background">다시 읽기: 1. 먼저 알아야 할 것</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">새 문장을 하나 더한다: "관리자는 회원의 이메일을 볼 수 있다." 이 문서의 규칙으로 읽으면 이 문장은 무엇을 말하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">시스템에 그 기능이 있다는 사실. 요구가 아니다.</button>
+        <button type="button" data-opt="b">관리자가 볼 가능성이 있다는 것. 받아들인 한계다.</button>
+        <button type="button" data-opt="c">허용(MAY). 구현해도 되고 하지 않아도 된다. 굵게 쓰지 않으면 설명으로 읽힌다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>"읽는 법"이 "~할 수 있다"를 허용으로만 쓴다고 정했다. 능력과 가능성은 다른 말로 쓴다 ("다른 경우가 있다"). 그리고 굵은 말이 없는 문장은 요구가 아니다. 그래서 MAY로 쓰려면 굵게 써야 한다. 꼭 보여 줘야 한다면 "반드시 ~해야 한다"로 써야 한다.</p>
+        <a href="#step1">다시 읽기: 단계 1</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">단계 6의 종류 C는 "지킨다. 그러나 강제하는 테스트가 없다"였다. 지키고 있는데 왜 테스트를 더했는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">통과하는 상태는 "지금 지킨다"만 말한다. 다음 변경이 어겨도 아무것도 실패하지 않는다. 결함을 넣어 보면 그 차이가 보인다.</button>
+        <button type="button" data-opt="b">ADR-0004가 "수용 기준 하나에 테스트가 하나 이상"이라고 한다. C의 문장들은 수용 기준이다.</button>
+        <button type="button" data-opt="c">테스트의 수가 많을수록 문서의 MUST의 수와 가까워진다. 수를 맞추려고 더했다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>"application은 Spring을 절대 써서는 안 된다"는 조심해서 지킨 것이었다. 결함을 넣는 확인에서 @Service를 붙이니 새 아키텍처 테스트가 실패했다. 그 테스트가 없었다면 아무것도 실패하지 않는다. C의 문장은 ADR의 결정이다. 수용 기준이 아니다.</p>
+        <a href="#step6">다시 읽기: 단계 6</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">300자인 사용자 이름의 500은 8스텝 동안 리뷰 메모였다. 코드를 고쳐서 닫지 못한 이유는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">DB의 열을 더 길게 바꾸면 되지만, H2가 그 길이를 지원하지 않는다.</button>
+        <button type="button" data-opt="b">결함이 문서에 있었다. "올바른 값"의 끝이 어디인지 아무도 정하지 않았다. 그 결정은 도메인의 것이다.</button>
+        <button type="button" data-opt="c">500의 본문을 Problem Details로 바꾸면 ADR-0005를 지킨다. 그것으로 충분했다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>코드는 R3("비어 있지 않다")대로 했다. 상한은 문서에 없었고, DB의 기본값(255)이 대신 답했다. 열을 늘려도 끝은 여전히 DB가 정한다. 500의 본문을 고친 것(단계 6의 A-1)은 다른 요구다. 그 뒤에도 AC-1.1("값이 모두 올바르면 반드시 만들어야 한다")은 어긴 상태였다.</p>
+        <a href="#step7">다시 읽기: 단계 7</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">상태의 줄에는 "뜻은 바꾸지 않았다"고 적혀 있다. 리뷰하는 사람이 가장 먼저 의심할 곳은?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">ID. 다시 쓰면서 AC의 번호가 밀렸으면 테스트의 이름과 어긋난다.</button>
+        <button type="button" data-opt="b">키워드의 수. "반드시"가 문서마다 맞게 세어졌는지 본다.</button>
+        <button type="button" data-opt="c">흐린 말이 분명해진 9곳. 뜻을 고른 사람이 AI이고, 근거가 모두 "지금의 코드가 그렇다"다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>흐린 문장을 분명하게 쓰면 뜻이 좁아진다. 좁히는 것은 결정이다. 9곳에서 문서가 코드를 따라갔다. 코드가 틀렸다면 문서도 같이 틀린다. ID는 그대로다 (AC-1.9만 더했다). 키워드의 수는 검사가 세지만, 그 검사는 낱말만 본다.</p>
+        <a href="#step5">다시 읽기: 단계 5</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+
+<script>
+/* LOGIC-START — 스텝 42, 43의 검사 스크립트와 같은 정규식 */
+function check(sentence, level){
+  var count=function(re){ return (sentence.match(re)||[]).length; };
+  var must=count(/반드시/g), mustNot=count(/절대/g), should=count(/권장한다/g), can=count(/수 있다|수 없다/g);
+  var levelOk = level==null ? null : (level==='MUST NOT' ? mustNot>0 : (must>0 && mustNot===0));
+  var reads = mustNot>0 ? 'MUST NOT' : must>0 ? 'MUST' : should>0 ? 'SHOULD' : '수준이 없다';
+  return {must:must, mustNot:mustNot, should:should, can:can, levelOk:levelOk, reads:reads};
+}
+/* LOGIC-END */
+var SENTENCES = [{"id": "AC-1.1", "level": "MUST", "new": "값이 모두 올바르면 시스템은 **반드시** 회원을 만들**어야 한다**. 시스템은 결과로 사용자 이름과 이메일을 **반드시** 돌려줘**야 한다**.", "old": "올바른 값으로 가입하면 회원이 생긴다. 결과로 사용자 이름과 이메일을 받는다."}, {"id": "AC-1.2", "level": "MUST", "new": "사용자 이름, 이메일, 비밀번호 중 하나라도 비어 있으면 시스템은 **반드시** 가입을 거부**해야 한다**. 시스템은 어느 값이 문제인지 **반드시** 알려줘**야 한다**.", "old": "사용자 이름, 이메일, 비밀번호 중 하나라도 비어 있으면 거부한다. 어느 값이 문제인지 알려준다."}, {"id": "AC-1.3", "level": "MUST", "new": "이메일의 형식이 틀리면 시스템은 **반드시** 가입을 거부**해야 한다**.", "old": "이메일의 형식이 틀리면 거부한다."}, {"id": "AC-1.4", "level": "MUST", "new": "비밀번호가 8자보다 짧으면 시스템은 **반드시** 가입을 거부**해야 한다**. 비밀번호가 UTF-8로 72바이트보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**.", "old": "비밀번호가 8자보다 짧거나, UTF-8로 72바이트보다 길면 거부한다."}, {"id": "AC-1.5", "level": "MUST", "new": "이메일이 이미 있으면 시스템은 **반드시** 가입을 거부**해야 한다**.", "old": "이미 있는 이메일이면 거부한다."}, {"id": "AC-1.6", "level": "MUST", "new": "사용자 이름이 이미 있으면 시스템은 **반드시** 가입을 거부**해야 한다**.", "old": "이미 있는 사용자 이름이면 거부한다."}, {"id": "AC-1.7", "level": "MUST NOT", "new": "시스템은 어떤 결과에도 비밀번호와 비밀번호 해시를 **절대** 넣어**서는 안 된다**.", "old": "어떤 결과에도 비밀번호와 비밀번호 해시가 들어 있지 않다."}, {"id": "AC-1.8", "level": "MUST", "new": "시스템은 대소문자만 다른 이메일을 **반드시** 이미 있는 이메일로 봐**야 한다**.", "old": "대소문자만 다른 이메일은 이미 있는 이메일로 본다."}, {"id": "AC-1.9", "level": "MUST", "new": "사용자 이름이 50자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 이메일이 254자보다 길면 시스템은 **반드시** 가입을 거부**해야 한다**. 두 경우에 시스템은 어느 값이 문제인지 **반드시** 알려줘**야 한다**.", "old": null}, {"id": "AC-2.1", "level": "MUST", "new": "이메일과 비밀번호가 맞으면 시스템은 **반드시** 액세스 토큰을 돌려줘**야 한다**.", "old": "이메일과 비밀번호가 맞으면 액세스 토큰을 받는다."}, {"id": "AC-2.2", "level": "MUST", "new": "비밀번호가 틀리면 시스템은 **반드시** 로그인을 거부**해야 한다**.", "old": "비밀번호가 틀리면 거부한다."}, {"id": "AC-2.3", "level": "MUST", "new": "이메일이 없으면 시스템은 **반드시** 로그인을 거부**해야 한다**. 이 결과의 내용은 AC-2.2의 결과의 내용과 **반드시** 같**아야 한다**. 응답 시간은 이 기준의 대상이 아니다 (\"받아들인 한계\"를 본다).", "old": "없는 이메일이면 거부한다. AC-2.2와 구분할 수 없는 결과를 준다."}, {"id": "AC-2.4", "level": "MUST", "new": "이메일이나 비밀번호가 비어 있으면 시스템은 **반드시** 로그인을 거부**해야 한다**. 이메일의 형식이 틀리면 시스템은 **반드시** 로그인을 거부**해야 한다**. 두 경우에 시스템은 값의 오류로 **반드시** 알려줘**야 한다**. 이 결과는 AC-2.2의 결과와 **반드시** 달라**야 한다**.", "old": "이메일이나 비밀번호가 비어 있거나, 이메일의 형식이 틀리면 거부한다. 값의 오류로 알려준다. AC-2.2와 다른 결과다."}, {"id": "AC-2.5", "level": "MUST", "new": "이메일의 대소문자가 가입할 때와 달라도 시스템은 **반드시** 로그인을 받아들여**야 한다**.", "old": "이메일의 대소문자가 가입할 때와 달라도 로그인된다."}, {"id": "AC-3.1", "level": "MUST", "new": "액세스 토큰이 유효하면 시스템은 토큰의 주인의 사용자 이름과 이메일을 **반드시** 돌려줘**야 한다**.", "old": "유효한 액세스 토큰을 내면 자기의 사용자 이름과 이메일을 받는다."}, {"id": "AC-3.2", "level": "MUST", "new": "액세스 토큰이 없으면 시스템은 **반드시** 조회를 거부**해야 한다**.", "old": "액세스 토큰이 없으면 거부한다."}, {"id": "AC-3.3", "level": "MUST", "new": "액세스 토큰이 위조됐으면 시스템은 **반드시** 조회를 거부**해야 한다**. 액세스 토큰이 만료됐으면 시스템은 **반드시** 조회를 거부**해야 한다**.", "old": "액세스 토큰이 위조됐거나 만료됐으면 거부한다."}, {"id": "AC-3.4", "level": "MUST NOT", "new": "시스템은 다른 회원의 정보를 **절대** 돌려줘**서는 안 된다**. 조회의 대상은 **반드시** 토큰의 주인이**어야 한다**.", "old": "다른 회원의 정보는 조회할 수 없다. 조회 대상은 항상 토큰의 주인이다."}, {"id": "AC-3.5", "level": "MUST", "new": "토큰이 유효해도 토큰의 주인인 회원이 없으면 시스템은 **반드시** 조회를 거부**해야 한다**.", "old": "토큰이 유효해도 그 주인인 회원이 없으면 거부한다."}, {"id": "R1", "level": "MUST", "new": "회원은 사용자 이름, 이메일, 비밀번호 해시를 **반드시** 가져**야 한다**. 셋 중 하나라도 없는 회원은 없다.", "old": "회원에게는 사용자 이름, 이메일, 비밀번호 해시가 항상 있다."}, {"id": "R2", "level": "MUST", "new": "이메일은 **반드시** 올바른 형식이**어야 한다**. 이메일은 **반드시** 254자 이하**여야 한다**. 이메일은 **반드시** 소문자로 바꿔서 저장**해야 한다**.", "old": "이메일은 올바른 형식이다. 소문자로 바꿔서 저장한다."}, {"id": "R3", "level": "MUST", "new": "사용자 이름은 **반드시** 한 자 이상이**어야 한다**. 사용자 이름은 **반드시** 50자 이하**여야 한다**. 사용자 이름의 앞뒤 공백은 **반드시** 지워**야 한다**. 길이는 공백을 지운 뒤에 센다.", "old": "사용자 이름은 비어 있지 않다. 앞뒤 공백을 지운다."}, {"id": "R4", "level": "MUST", "new": "비밀번호는 **반드시** 8자 이상이**어야 한다**. 비밀번호는 **반드시** UTF-8로 72바이트 이하**여야 한다**. 문자 종류의 조건은 없다. 한 자는 유니코드의 코드 포인트 하나다.", "old": "비밀번호는 8자 이상이고, UTF-8로 72바이트 이하다. 문자 종류의 조건은 없다. 한 자는 유니코드의 코드 포인트 하나다."}, {"id": "R5", "level": "MUST NOT", "new": "비밀번호의 원문을 **절대** 저장**해서는 안 된다**. 회원은 비밀번호 해시만 가진다.", "old": "비밀번호의 원문은 저장하지 않는다. 회원은 해시만 가진다."}, {"id": "R6", "level": "MUST NOT", "new": "두 회원의 이메일이 **절대** 같**아서는 안 된다**.", "old": "이메일은 회원마다 다르다."}, {"id": "R7", "level": "MUST NOT", "new": "두 회원의 사용자 이름이 **절대** 같**아서는 안 된다**.", "old": "사용자 이름은 회원마다 다르다."}, {"id": "R8", "level": "MUST", "new": "로그인은 **반드시** 이메일로 회원을 찾**아야 한다**. 로그인은 비밀번호가 그 회원의 비밀번호 해시와 맞는지 **반드시** 확인**해야 한다**.", "old": "로그인은 이메일로 회원을 찾고, 비밀번호가 해시와 맞는지 확인한다."}, {"id": "R9", "level": "MUST NOT", "new": "로그인이 실패하면 로그인은 이유(없는 이메일, 틀린 비밀번호)를 **절대** 구분**해서는 안 된다**.", "old": "로그인이 실패하면 이유(없는 이메일, 틀린 비밀번호)를 구분하지 않는다."}, {"id": "R10", "level": "MUST NOT", "new": "조회는 회원에게 다른 회원의 정보를 **절대** 돌려줘**서는 안 된다**. 회원은 자기의 정보만 조회한다.", "old": "회원은 자기의 정보만 조회한다."}];
+(function(){
+  var ids=document.getElementById('w-ids'); if(!ids) return;
+  function row(t,k,v,cls){ var tr=document.createElement('tr'), th=document.createElement('th'), td=document.createElement('td');
+    th.textContent=k; td.textContent=v; if(cls) td.className=cls; tr.appendChild(th); tr.appendChild(td); t.appendChild(tr); }
+  function fill(tableId, sentence, level){
+    var t=document.getElementById(tableId); t.textContent='';
+    if(sentence==null){ row(t,'문장','없다 (새로 생긴 기준이다)','skip'); return; }
+    var r=check(sentence, level);
+    row(t,'반드시 / 절대', r.must+' / '+r.mustNot);
+    row(t,'수 있다 · 수 없다', String(r.can), r.can>0?'no':'yes');
+    row(t,'읽히는 수준', r.reads, r.reads==='수준이 없다'?'no':'yes');
+    if(level!=null) row(t,'표의 수준 ('+level+')과 맞는가', r.levelOk?'맞다':'맞지 않다', r.levelOk?'yes':'no');
+  }
+  function show(s){
+    document.getElementById('w-old').textContent = s.old==null ? '—' : s.old;
+    document.getElementById('w-new').textContent = s.new;
+    fill('w-old-r', s.old, null); fill('w-new-r', s.new, s.level);
+    Array.prototype.forEach.call(ids.children,function(b){ b.style.borderColor = b.textContent===s.id ? 'var(--accent)' : ''; });
+  }
+  SENTENCES.forEach(function(s){
+    var b=document.createElement('button'); b.type='button'; b.textContent=s.id;
+    b.addEventListener('click',function(){ show(s); }); ids.appendChild(b);
+  });
+  var free=document.getElementById('w-free');
+  function freeRender(){ fill('w-free-r', free.value, null); }
+  free.addEventListener('input',freeRender);
+  show(SENTENCES.filter(function(s){return s.id==='AC-1.7';})[0]); freeRender();
+})();
+</script>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
