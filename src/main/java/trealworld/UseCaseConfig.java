@@ -3,11 +3,13 @@ package trealworld;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import trealworld.application.port.in.GetMemberUseCase;
 import trealworld.application.port.in.LoginUseCase;
 import trealworld.application.port.in.RegisterMemberUseCase;
 import trealworld.application.port.out.AccessTokenIssuer;
 import trealworld.application.port.out.MemberRepository;
 import trealworld.application.port.out.PasswordHasher;
+import trealworld.application.service.GetMemberService;
 import trealworld.application.service.LoginService;
 import trealworld.application.service.RegisterMemberService;
 
@@ -26,6 +28,11 @@ class UseCaseConfig {
 	LoginUseCase loginUseCase(MemberRepository members, PasswordHasher passwordHasher,
 			AccessTokenIssuer accessTokenIssuer) {
 		return new LoginService(members, passwordHasher, accessTokenIssuer);
+	}
+
+	@Bean
+	GetMemberUseCase getMemberUseCase(MemberRepository members) {
+		return new GetMemberService(members);
 	}
 
 }

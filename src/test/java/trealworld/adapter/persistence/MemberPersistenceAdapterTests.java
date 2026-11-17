@@ -81,6 +81,20 @@ class MemberPersistenceAdapterTests {
 		assertThat(members.findByEmail(new Email("nobody-" + id + "@example.com"))).isEmpty();
 	}
 
+	/** 조회는 식별자로 회원을 찾는다. (AC-3.1) */
+	@Test
+	void ac3_1_a_saved_member_is_found_by_id() {
+		Member saved = members.save(member("jake-" + id, "jake-" + id + "@example.com"));
+
+		assertThat(members.findById(saved.getId())).hasValueSatisfying(
+				found -> assertThat(found.getEmail()).isEqualTo(new Email("jake-" + id + "@example.com")));
+	}
+
+	@Test
+	void ac3_5_an_id_that_is_not_saved_is_not_found() {
+		assertThat(members.findById(Long.MAX_VALUE)).isEmpty();
+	}
+
 	private static Member member(String username, String email) {
 		return Member.register(new Username(username), new Email(email), new PasswordHash("hash"));
 	}

@@ -37,6 +37,11 @@ class MemberPersistenceAdapter implements MemberRepository {
 	}
 
 	@Override
+	public Optional<Member> findById(Long id) {
+		return jpaRepository.findById(id);
+	}
+
+	@Override
 	public Optional<Member> findByEmail(Email email) {
 		return jpaRepository.findByEmailValue(email.value());
 	}

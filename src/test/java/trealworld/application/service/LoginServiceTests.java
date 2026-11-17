@@ -145,6 +145,11 @@ class LoginServiceTests {
 		}
 
 		@Override
+		public Optional<Member> findById(Long id) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public Optional<Member> findByEmail(Email email) {
 			lookedUp.add(email);
 			return saved.stream().filter(member -> member.getEmail().equals(email)).findFirst();

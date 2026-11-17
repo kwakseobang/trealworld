@@ -178,6 +178,11 @@ class RegisterMemberServiceTests {
 		}
 
 		@Override
+		public Optional<Member> findById(Long id) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public Optional<Member> findByEmail(Email email) {
 			return saved.stream().filter(member -> member.getEmail().equals(email)).findFirst();
 		}

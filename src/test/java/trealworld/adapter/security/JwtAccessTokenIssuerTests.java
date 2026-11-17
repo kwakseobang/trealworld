@@ -28,7 +28,8 @@ class JwtAccessTokenIssuerTests {
 	private static final String SECRET = "test-secret-test-secret-test-secret-0123";
 	private static final Instant NOW = Instant.parse("2026-11-17T09:00:00Z");
 
-	private final JwtAccessTokenIssuer issuer = new JwtAccessTokenIssuer(SECRET, Clock.fixed(NOW, ZoneOffset.UTC));
+	private final JwtAccessTokenIssuer issuer = new JwtAccessTokenIssuer(new JwtSigningKey(SECRET),
+			Clock.fixed(NOW, ZoneOffset.UTC));
 
 	@Test
 	void adr0003_the_token_is_a_jwt_signed_with_the_secret() throws Exception {
@@ -76,21 +77,6 @@ class JwtAccessTokenIssuerTests {
 	@Test
 	void adr0003_a_member_that_is_not_saved_gets_no_token() {
 		assertThatIllegalArgumentException().isThrownBy(() -> issuer.issue(member(null)));
-	}
-
-	@Test
-	void adr0003_a_secret_shorter_than_32_bytes_is_rejected() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new JwtAccessTokenIssuer("too-short", Clock.systemUTC()));
-	}
-
-	/** 키가 없으면 임의의 키를 만든다. 인스턴스마다 키가 다르다. */
-	@Test
-	void adr0003_without_a_secret_a_random_key_is_used() throws Exception {
-		JwtAccessTokenIssuer first = new JwtAccessTokenIssuer("", Clock.fixed(NOW, ZoneOffset.UTC));
-		JwtAccessTokenIssuer second = new JwtAccessTokenIssuer("", Clock.fixed(NOW, ZoneOffset.UTC));
-
-		assertThat(first.issue(member(7L))).isNotEqualTo(second.issue(member(7L)));
 	}
 
 	private static Member member(Long id) {
