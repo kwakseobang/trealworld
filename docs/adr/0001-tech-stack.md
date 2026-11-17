@@ -23,5 +23,5 @@
 - 대안을 비교하지 않았다. 사용자가 익숙한 스택을 골랐다.
 - Spring Boot의 버전은 Spring Initializr(start.spring.io)의 기본값에서 확인했다. SNAPSHOT과 RC는 뺐다.
 - 기본 패키지는 `trealworld`다.
-- 의존성은 쓰는 작업에서 더한다. Spring Security, 검증, ArchUnit은 아직 없다.
+- 의존성은 쓰는 작업에서 더한다. ArchUnit 1.5.1은 작업 2에서 더했다. Spring Security와 검증은 아직 없다.
 - H2는 인메모리다. 서버를 다시 시작하면 데이터가 사라진다. 시연에는 충분하다.
