@@ -44,6 +44,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
 strong,b{font-weight:700}
+a{color:var(--accent)}
 .warn{color:var(--warn)}
 .callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
 main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
@@ -85,7 +86,30 @@ pre.diff .mark{background:var(--hl)}
 .widget canvas,.widget svg{max-width:100%;touch-action:none}
 .static-fallback{display:none}
 ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
 @media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
   body{background:#fff;color:#000;font-size:11pt}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   main{max-width:none;padding:0}
@@ -108,7 +132,7 @@ a{color:var(--accent)}
 <header>
   <p class="kicker">explain-diff · plan 01 · 작업 1</p>
   <h1>설계 문서 8개 뒤의 첫 코드: 빈 Spring Boot 4 애플리케이션</h1>
-  <div class="meta"><span>commit 53667da (로컬, push 전)</span><span>13 files</span><span>+522 / −4</span></div>
+  <div class="meta"><span>commit 53667da</span><span>13 files</span><span>+522 / −4</span></div>
   <div class="assumption"><b>독자 가정.</b> Spring과 Gradle을 잘 아는 독자다. Spring Boot의 기본 설명은 뺐다. Spring Boot 4에서 바뀐 것과, 이 커밋에서 AI가 정한 것에 집중했다.</div>
 </header>
 
@@ -174,7 +198,7 @@ a{color:var(--accent)}
 <section id="walkthrough">
   <h2>3. 변경을 순서대로 읽기</h2>
 
-  <div class="step">
+  <div class="step" id="step1">
     <h3>스텝 1 — 버전 3개를 고정한다</h3>
     <p class="why">왜: "최신 안정 버전"은 날마다 뜻이 바뀐다. 숫자로 바꿔야 누구의 컴퓨터에서나 같은 빌드가 된다.</p>
     <p class="file-role"><b>build.gradle.kts</b> — 빌드의 정의다. 이 프로젝트에서 사람이 읽을 가치가 가장 큰 파일이다.</p>
@@ -192,7 +216,7 @@ a{color:var(--accent)}
     <p class="bridge">도구의 버전이 정해졌다. 다음은 "무엇을 넣는가"다.</p>
   </div>
 
-  <div class="step">
+  <div class="step" id="step2">
     <h3>스텝 2 — 지금 쓰는 의존성만 넣는다</h3>
     <p class="why">왜: plan의 요구는 "빈 애플리케이션이 뜬다"다. 그것에 필요한 것과 ADR-0001의 스택만 있으면 된다.</p>
     <p class="file-role"><b>build.gradle.kts</b> (이어서)</p>
@@ -215,7 +239,7 @@ a{color:var(--accent)}
     <p class="bridge">빌드가 정의됐다. 이제 빌드할 코드가 필요하다.</p>
   </div>
 
-  <div class="step">
+  <div class="step" id="step3">
     <h3>스텝 3 — 뜨는 것 하나와, 뜨는지 확인하는 것 하나</h3>
     <p class="why">왜: "빈 애플리케이션이 뜬다"를 사람이 눈으로 한 번 확인하면 다음 사람은 모른다. 테스트로 남기면 빌드할 때마다 확인된다.</p>
     <p class="file-role"><b>src/main/java/trealworld/TrealworldApplication.java</b> — 시작점이다. 컴포넌트 스캔의 뿌리도 여기다.</p>
@@ -231,7 +255,7 @@ a{color:var(--accent)}
     <p class="bridge">코드가 뜬다. 남은 것은 문서의 숙제다.</p>
   </div>
 
-  <div class="step">
+  <div class="step" id="step4">
     <h3>스텝 4 — 확인한 숫자를 ADR에 돌려준다</h3>
     <p class="why">왜: ADR-0001은 "프로젝트를 만들 때 확인해서 적는다"고 약속했다. 약속한 문장을 결과의 문장으로 바꾼다.</p>
     <p class="file-role"><b>docs/adr/0001-tech-stack.md</b> — 기술 스택의 결정이다. 사용자가 승인한 문서다.</p>
@@ -259,7 +283,7 @@ a{color:var(--accent)}
 </section>
 
 <section id="review">
-  <h2>5. 검토 메모</h2>
+  <h2>5. 리뷰 메모</h2>
   <p>"확인"은 실행해서 본 것이다. "추정"은 파일을 읽고 판단한 것이다.</p>
   <ul>
     <li><b>[확인] <code>spring.jpa.open-in-view</code> 경고가 뜬다.</b> 시작할 때의 로그에 <code>WARN … spring.jpa.open-in-view is enabled by default</code>가 있다. 기본값은 "HTTP 요청이 끝날 때까지 영속성 컨텍스트를 연다"다. ADR-0002(헥사고날)와 ADR-0005(응답용 객체)의 방향과 반대다. 웹 어댑터가 지연 로딩을 건드려도 오류가 나지 않아서, 경계를 넘는 실수가 숨는다. → <code>false</code>로 끄는 것을 권장한다. 시점은 지금이거나 JPA를 처음 쓰는 작업 4다.</li>
@@ -274,6 +298,128 @@ a{color:var(--accent)}
   </ul>
 </section>
 
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>6. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 권장하는 규칙: 통과하기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="b">
+      <p class="q-text">내일 Spring Boot 4.1.3이 나온다. 이 저장소를 새로 받아서 <code>./gradlew build</code>를 실행하면 Hibernate의 버전은 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">의존성에 버전이 없으므로 Gradle이 그날의 최신 Hibernate를 받는다</button>
+        <button type="button" data-opt="b">오늘과 같다. Spring Boot 4.1.2가 정한 버전을 따른다</button>
+        <button type="button" data-opt="c">Spring Boot가 4.1.3으로 올라가고, Hibernate도 함께 올라간다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>빌드 파일에 숫자로 고정한 것은 Spring Boot 4.1.2다. 의존성에 버전이 없는 것은 "최신을 받는다"가 아니다. "Spring Boot가 정한 버전을 따른다"다. Spring Boot의 숫자를 사람이 바꾸기 전에는 아무것도 바뀌지 않는다.</p>
+        <a href="#step1">다시 읽기: 스텝 1</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">빌드가 성공했고 테스트도 통과했다. 이 사실은 "Lombok이 Java 25에서 동작한다"에 대해 무엇을 말하는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">동작한다. 애너테이션 프로세서가 컴파일에 참여했고 오류가 없었다</button>
+        <button type="button" data-opt="b">동작한다. Spring Boot가 버전을 관리하므로 호환이 보장된다</button>
+        <button type="button" data-opt="c">아무것도 말하지 않는다. Lombok 애너테이션을 쓰는 코드가 아직 없다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>검증은 실제로 실행된 것만 증명한다. 이 커밋의 Java 코드 2개에는 Lombok 애너테이션이 없다. Lombok은 classpath에 있을 뿐이고, 만든 코드가 0줄이다. 첫 확인은 작업 3(도메인)에서 일어난다.</p>
+        <a href="#review">다시 읽기: 리뷰 메모</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text"><code>build.gradle.kts</code>에서 <code>runtimeOnly("com.h2database:h2")</code> 한 줄만 지운다. 본문이 빈 <code>contextLoads</code> 테스트는 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">실패한다. JPA가 연결할 DB가 없어서 컨텍스트가 뜨지 못한다</button>
+        <button type="button" data-opt="b">통과한다. 본문에 검증하는 코드가 없기 때문이다</button>
+        <button type="button" data-opt="c">통과한다. <code>@SpringBootTest</code>의 기본값은 실제 포트를 열지 않기 때문이다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>이 테스트의 검증은 본문이 아니고 <code>@SpringBootTest</code>에 있다. 컨텍스트는 Hibernate와 H2의 연결까지 띄운다. 설정 파일에 DB의 주소가 없으므로, H2가 classpath에서 사라지면 DB를 만들 방법이 없다. 포트를 열지 않는 것은 웹 서버의 이야기이고, DB와는 관계가 없다.</p>
+        <a href="#step3">다시 읽기: 스텝 3</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">ADR-0003은 Spring Security를 쓰기로 이미 승인했다. 그런데 이 커밋에는 Spring Security가 없다. 가장 큰 이유는 무엇인가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">Spring Boot 4에서 스타터의 이름이 바뀌어서 아직 확인하지 못했다</button>
+        <button type="button" data-opt="b">처음 쓰는 작업에서 더하면 "왜 들어왔는가"가 커밋 역사에 남는다</button>
+        <button type="button" data-opt="c">Spring Security가 있으면 빈 애플리케이션이 뜨지 않는다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>이 커밋의 원칙은 "아직 쓰지 않는 것은 넣지 않는다"다. plan의 작업 1은 "빌드가 성공한다"와 "빈 애플리케이션이 뜬다"만 요구한다. 의존성을 그것을 쓰는 코드와 같은 커밋에 넣으면, 역사가 이유를 설명한다. Spring Security가 있어도 애플리케이션은 뜬다.</p>
+        <a href="#idea">다시 읽기: 핵심 아이디어</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text"><code>spring.jpa.open-in-view</code>의 기본값(켜짐)이 이 프로젝트의 헥사고날 구조에 해로운 이유는 무엇인가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">요청마다 DB 연결을 새로 만들어서 인메모리 H2가 느려진다</button>
+        <button type="button" data-opt="b">ArchUnit의 규칙이 이 설정을 위반으로 잡아서 빌드가 실패한다</button>
+        <button type="button" data-opt="c">웹 어댑터가 엔티티의 지연 로딩을 건드려도 오류가 나지 않아서, 경계를 넘는 실수가 숨는다</button>
+      </div>
+      <div class="explain" hidden>
+        <p>켜져 있으면 영속성 컨텍스트가 HTTP 요청이 끝날 때까지 열려 있다. 그래서 웹 어댑터에서 도메인 엔티티를 직접 만져도 동작한다. ADR-0005는 "응답용 객체로 만든다"고 정했다. 끄면 그 실수가 바로 오류로 드러난다. ArchUnit은 패키지의 의존만 보므로 이 설정을 잡지 못한다.</p>
+        <a href="#review">다시 읽기: 리뷰 메모</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
 </main>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
 </body>
 </html>
