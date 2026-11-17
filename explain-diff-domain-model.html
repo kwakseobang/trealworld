@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도메인 타입 4개</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+
+/* 이 문서에서 더한 것: 표, 그림, 위젯. 색은 위의 토큰만 쓴다. */
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+table.t th,table.t td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table.t th{background:var(--code-bg);font-weight:600}
+table.t td.yes,.readout td.yes{color:var(--add-fg);font-weight:700}
+table.t td.no,.readout td.no{color:var(--warn);font-weight:700}
+table.readout{font:13px/1.6 var(--mono)} table.readout th{white-space:nowrap}
+.d-box{fill:var(--card);stroke:var(--line)} .d-gate{fill:var(--accent-soft);stroke:var(--accent)}
+.d-member{fill:var(--code-bg);stroke:var(--fg);stroke-width:1.5}
+.d-txt{fill:var(--fg);font:12px var(--mono)} .d-sub{fill:var(--muted);font:11.5px var(--sans)}
+.d-lbl{fill:var(--muted);font:700 12px var(--sans)} .d-warn{fill:var(--warn);font:700 12px var(--mono)}
+.d-arrow{stroke:var(--muted);stroke-width:1.5} .d-arroww{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:4 3}
+.d-head{fill:var(--muted)} .d-headw{fill:var(--warn)}
+.w-label{font:600 14px var(--sans);display:flex;gap:10px;align-items:center}
+.w-label input{flex:1;min-width:0;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.w-samples{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.w-samples button{font:12px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+.w-samples button:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <p class="kicker">plan 01 · 작업 3 · 도메인</p>
+  <h1>규칙을 어긴 회원은 만들 수 없다</h1>
+  <div class="meta"><span>commit 2659e6d</span><span>10 files</span><span>+315 / −2</span></div>
+  <div class="assumption">독자: Java, Spring, TDD를 잘 아는 사람. Domain 01과 ADR-0002는 이미 읽었다. <code>record</code>와 ArchUnit의 설명은 접어 두었다. 필요하면 펼친다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 할 것</h2>
+
+  <h3>지금 어디인가</h3>
+  <p>plan 01의 작업 3이다. 도메인의 규칙 10개 중 4개를 만든다. 나머지 6개는 "지키는 곳"이 다르다.</p>
+  <table class="t">
+    <tr><th>규칙</th><th>내용</th><th>지키는 곳</th><th>이 커밋</th></tr>
+    <tr><td>R1</td><td>회원에게는 사용자 이름, 이메일, 비밀번호 해시가 항상 있다</td><td>회원</td><td class="yes">있다</td></tr>
+    <tr><td>R2</td><td>이메일은 올바른 형식이다. 소문자로 저장한다</td><td>이메일</td><td class="yes">있다</td></tr>
+    <tr><td>R3</td><td>사용자 이름은 비어 있지 않다. 앞뒤 공백을 지운다</td><td>사용자 이름</td><td class="yes">있다</td></tr>
+    <tr><td>R4</td><td>비밀번호는 8자 이상, 72바이트 이하다</td><td>가입</td><td class="no">없다 (작업 4)</td></tr>
+    <tr><td>R5</td><td>비밀번호의 원문은 저장하지 않는다. 회원은 해시만 가진다</td><td>회원</td><td class="yes">있다</td></tr>
+    <tr><td>R6~R10</td><td>유일성, 로그인, 조회</td><td>가입, 로그인, 조회</td><td class="no">없다 (작업 4~6)</td></tr>
+  </table>
+
+  <h3>이 커밋의 전</h3>
+  <ul>
+    <li><code>trealworld.domain</code> 패키지에는 <code>package-info.java</code> 하나만 있었다. 클래스가 없었다.</li>
+    <li>아키텍처 테스트의 규칙 1, 3은 <code>domain</code>의 클래스를 검사한다. 검사할 클래스가 없었다. 그래서 <code>allowEmptyShould(true)</code>를 붙여서 통과시켰다.</li>
+    <li>그 초록은 아무것도 증명하지 않았다. 패키지 이름에 오타가 있어도 통과했다.</li>
+  </ul>
+
+  <h3>domain이 받는 제약</h3>
+  <ul>
+    <li><code>domain</code>은 Spring을 쓰지 않는다 (ADR-0002 규칙 3).</li>
+    <li><code>domain</code>은 <code>application</code>과 <code>adapter</code>를 모른다 (규칙 1).</li>
+    <li>도메인의 테스트는 Spring 없이 돈다 (ADR-0004).</li>
+  </ul>
+
+  <details>
+    <summary>record의 compact constructor</summary>
+    <p><code>record Email(String value)</code>에서 <code>public Email { … }</code>는 인자 목록이 없는 생성자다. 본문은 필드에 값을 넣기 <b>전에</b> 실행된다. 본문에서 <code>value = …</code>로 인자를 바꾸면, 바뀐 값이 필드에 들어간다. 예외를 던지면 객체는 생기지 않는다.</p>
+    <p>record의 <code>equals</code>는 필드의 값을 비교한다. 그래서 생성자에서 값을 정리하면, 정리된 값으로 비교된다.</p>
+  </details>
+  <details>
+    <summary>ArchUnit의 allowEmptyShould</summary>
+    <p>ArchUnit은 규칙의 <code>that()</code>에 맞는 클래스가 하나도 없으면 테스트를 실패시킨다. "검사한 것이 없다"를 통과로 보지 않는다. <code>allowEmptyShould(true)</code>는 이 보호를 끈다.</p>
+  </details>
+
+  <p><b>풀어야 할 문제:</b> 규칙 R1, R2, R3, R5를 어디에 두면 아무도 건너뛸 수 없는가?</p>
+</section>
+
+<section id="idea">
+  <h2>2. 핵심 아이디어</h2>
+  <p class="intuition">규칙을 검사하는 코드를 따로 두지 않는다. 규칙을 어긴 값은 처음부터 만들 수 없게 한다.</p>
+  <ul>
+    <li><code>String</code>은 아무 글자나 담는다. <code>Email</code>은 생성자를 지나야만 생긴다.</li>
+    <li>생성자가 형식을 검사하고 소문자로 바꾼다. 그래서 <code>Email</code> 타입의 값이 있으면 R2는 이미 지켜졌다. 다시 검사할 필요가 없다.</li>
+    <li><code>Member</code>는 이 타입 3개만 받는다. <code>Member</code>에는 <code>String</code> 필드가 없다.</li>
+    <li>비밀번호의 원문은 <code>String</code>이다. <code>Member</code>에는 그것을 둘 자리가 없다 (R5).</li>
+  </ul>
+  <figure>
+    <svg viewBox="0 0 720 262" role="img" aria-label="문자열이 생성자를 지나 값 객체가 되고, 값 객체 3개가 회원이 된다">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-head"/></marker>
+      <marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="d-headw"/></marker></defs>
+      <text x="10" y="16" class="d-lbl">String (아무 값)</text>
+      <text x="262" y="16" class="d-lbl">생성자 = 문</text>
+      <text x="510" y="16" class="d-lbl">Member</text>
+
+      <rect x="10" y="28" width="196" height="36" rx="6" class="d-box"/><text x="20" y="51" class="d-txt">"Jake@Example.COM"</text>
+      <rect x="262" y="28" width="190" height="36" rx="6" class="d-gate"/><text x="272" y="44" class="d-txt">new Email(…)</text><text x="272" y="58" class="d-sub">R2: 형식, 소문자</text>
+      <line x1="206" y1="46" x2="260" y2="46" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="452" y1="46" x2="508" y2="46" class="d-arrow" marker-end="url(#ah)"/>
+
+      <rect x="10" y="80" width="196" height="36" rx="6" class="d-box"/><text x="20" y="103" class="d-txt" xml:space="preserve">"  jake  "</text>
+      <rect x="262" y="80" width="190" height="36" rx="6" class="d-gate"/><text x="272" y="96" class="d-txt">new Username(…)</text><text x="272" y="110" class="d-sub">R3: 빈 값 거부, 공백 제거</text>
+      <line x1="206" y1="98" x2="260" y2="98" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="452" y1="98" x2="508" y2="98" class="d-arrow" marker-end="url(#ah)"/>
+
+      <rect x="10" y="132" width="196" height="36" rx="6" class="d-box"/><text x="20" y="155" class="d-txt">"$2a$10$…"</text>
+      <rect x="262" y="132" width="190" height="36" rx="6" class="d-gate"/><text x="272" y="148" class="d-txt">new PasswordHash(…)</text><text x="272" y="162" class="d-sub">빈 값 거부</text>
+      <line x1="206" y1="150" x2="260" y2="150" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="452" y1="150" x2="508" y2="150" class="d-arrow" marker-end="url(#ah)"/>
+
+      <rect x="510" y="22" width="200" height="152" rx="8" class="d-member"/>
+      <rect x="520" y="30" width="180" height="32" rx="5" class="d-box"/><text x="528" y="50" class="d-txt">jake@example.com</text>
+      <rect x="520" y="82" width="180" height="32" rx="5" class="d-box"/><text x="528" y="102" class="d-txt">jake</text>
+      <rect x="520" y="134" width="180" height="32" rx="5" class="d-box"/><text x="528" y="154" class="d-txt">$2a$10$…</text>
+      <text x="510" y="192" class="d-sub">R1: 셋 다 있어야 한다. R5: String 필드가 없다.</text>
+
+      <rect x="10" y="212" width="196" height="36" rx="6" class="d-box"/><text x="20" y="235" class="d-txt">"jake@"</text>
+      <rect x="262" y="212" width="190" height="36" rx="6" class="d-gate"/><text x="272" y="235" class="d-txt">new Email(…)</text>
+      <line x1="206" y1="230" x2="260" y2="230" class="d-arrow" marker-end="url(#ah)"/>
+      <line x1="452" y1="230" x2="500" y2="230" class="d-arroww" marker-end="url(#ahw)"/>
+      <text x="508" y="235" class="d-warn">✕ IllegalArgumentException</text>
+    </svg>
+    <figcaption>문자열은 생성자를 지나야 값 객체가 된다. 지나지 못한 값은 <code>Member</code>에 닿지 않는다.</figcaption>
+  </figure>
+  <p>이 그림을 기억하면 코드의 대부분을 예측할 수 있다. 타입 4개, 생성자의 검사 4개, 그리고 그것의 테스트다.</p>
+</section>
+
+<section id="explore">
+  <h2>3. 직접 넣어 보기</h2>
+  <p>값 하나를 세 생성자에 동시에 넣는다. <b>"NBSP 하나"</b>와 <b>"전각 공백 하나"</b>를 차례로 누르고, <code>Username</code>의 결과를 비교한다.</p>
+  <div class="widget">
+    <div class="live">
+      <label class="w-label">입력 <input id="w-in" type="text" value="Jake@Example.COM" autocomplete="off" spellcheck="false"></label>
+      <div id="w-samples" class="w-samples"></div>
+      <table class="t readout">
+        <tr><th>입력</th><td colspan="2"><code id="w-shown"></code></td></tr>
+        <tr><th>new Email(…)</th><td id="w-email-r"></td><td id="w-email-v"></td></tr>
+        <tr><th>new Username(…)</th><td id="w-username-r"></td><td id="w-username-v"></td></tr>
+        <tr><th>new PasswordHash(…)</th><td id="w-hash-r"></td><td id="w-hash-v"></td></tr>
+      </table>
+    </div>
+    <div class="static-fallback">
+      <table class="t readout">
+        <tr><th>입력</th><th>Email</th><th>Username</th></tr>
+        <tr><td>"Jake@Example.COM"</td><td>"jake@example.com"</td><td>"Jake@Example.COM"</td></tr>
+        <tr><td>"  jake \t"</td><td>거부</td><td>"jake"</td></tr>
+        <tr><td>"a@b.c"</td><td>"a@b.c"</td><td>"a@b.c"</td></tr>
+        <tr><td>" " (NBSP 하나)</td><td>거부</td><td>" "</td></tr>
+        <tr><td>"　" (전각 공백 하나)</td><td>거부</td><td>거부</td></tr>
+        <tr><td>"jake@exam　ple.com"</td><td>"jake@exam　ple.com"</td><td>"jake@exam　ple.com"</td></tr>
+      </table>
+    </div>
+    <div class="mirrors">같은 로직: <code>Email</code>, <code>Username</code>, <code>PasswordHash</code>의 compact constructor (<code>src/main/java/trealworld/domain/</code>). Java의 <code>\s</code>, <code>isBlank()</code>, <code>strip()</code>의 공백 정의를 그대로 옮겼다. 표의 값은 실제 클래스를 실행한 결과와 대조했다.</div>
+  </div>
+  <p>알아챌 것 3개:</p>
+  <ul>
+    <li>같은 문자열이 타입에 따라 다른 값이 된다. <code>Email</code>은 소문자로 바꾼다. <code>Username</code>은 대소문자를 그대로 둔다.</li>
+    <li>NBSP(<code> </code>) 하나는 <code>Username</code>을 통과한다. 화면에서는 빈 이름으로 보인다. 전각 공백(<code>　</code>) 하나는 거부된다.</li>
+    <li><code>PasswordHash</code>는 비어 있지 않으면 무엇이든 받는다. <code>"password123"</code>도 받는다.</li>
+  </ul>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 변경을 순서대로 읽기</h2>
+  <p>단계마다 테스트를 먼저 보여 준다. 이 커밋을 만든 순서와 같다.</p>
+  <ul>
+    <li>테스트 30개를 먼저 썼다. 컴파일이 실패했다 (red 1).</li>
+    <li>규칙이 없는 빈 타입을 넣었다. 23개가 단언에서 실패했다 (red 2).</li>
+    <li>규칙을 넣었다. 30개가 통과했다.</li>
+  </ul>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 이메일을 타입으로 만든다 (R2)</h3>
+    <p class="why">가장 규칙이 많은 값이다. 형식과 소문자, 두 가지를 한 곳에서 지킨다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/domain/EmailTests.java</b> — R2의 단위 테스트. 이름이 <code>r2_</code>로 시작한다.</p>
+<pre class="diff"><span class="skip">… 앞의 13줄 (package, import, 주석) …</span><span class="add">class EmailTests {</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r2_email_with_a_valid_format_is_accepted() {</span><span class="add">		assertThat(new Email("jake@example.com").value()).isEqualTo("jake@example.com");</span><span class="add">	}</span><span class="add"></span><span class="add">	@ParameterizedTest</span><span class="add">	@NullSource</span><span class="add">	@ValueSource(strings = { "", " ", "jake", "jake@", "@example.com", "jake@example", "jake@@example.com",</span><span class="add">			"ja ke@example.com", " jake@example.com" })</span><span class="add">	void r2_email_with_an_invalid_format_is_rejected(String value) {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; new Email(value));</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r2_email_is_stored_in_lower_case() {</span><span class="add">		assertThat(new Email("Jake@Example.COM").value()).isEqualTo("jake@example.com");</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r2_emails_that_differ_only_in_case_are_equal() {</span><span class="add">		assertThat(new Email("JAKE@example.com")).isEqualTo(new Email("jake@EXAMPLE.com"));</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>거부하는 값이 10개다. 마지막 2개(<code>"ja ke@…"</code>, <code>" jake@…"</code>)는 공백이 든 값이다. 이메일은 공백을 지우지 않고 거부한다.</li>
+      <li>마지막 테스트는 <code>value()</code>가 아니고 객체끼리 비교한다. AC-1.8과 AC-2.5의 기초다.</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Email.java</b> — 값 객체. <code>domain</code>의 첫 클래스다.</p>
+<pre class="diff"><span class="add">package trealworld.domain;</span><span class="add"></span><span class="add">import java.util.Locale;</span><span class="add">import java.util.regex.Pattern;</span><span class="add"></span><span class="add">/**</span><span class="add"> * 이메일. 올바른 형식이고, 소문자로 저장한다. (R2)</span><span class="add"> */</span><span class="add">public record Email(String value) {</span><span class="add"></span><span class="add">	private static final Pattern FORMAT = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");</span><span class="add"></span><span class="add">	public Email {</span><span class="add">		if (value == null || !FORMAT.matcher(value).matches()) {</span><span class="add">			throw new IllegalArgumentException("이메일의 형식이 올바르지 않다");</span><span class="add">		}</span><span class="add">		value = value.toLowerCase(Locale.ROOT);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>정규식의 뜻: <code>@</code>가 정확히 하나다. 공백이 없다. <code>@</code>의 뒤에 <code>.</code>이 있다. 그 이상은 보지 않는다.</li>
+      <li><code>matches()</code>는 문자열 전체가 맞아야 참이다. <code>^</code>와 <code>$</code>가 필요 없다.</li>
+      <li>순서가 중요하다. 검사가 먼저이고 <code>value = …</code>가 나중이다. 바뀐 값이 필드에 들어간다.</li>
+      <li><code>Locale.ROOT</code>: 서버의 로케일이 터키어이면 <code>"I".toLowerCase()</code>는 <code>ı</code>가 된다. 로케일을 고정해서 막는다.</li>
+    </ul>
+    <p class="bridge">이메일이 "검사 + 정리"의 본보기가 됐다. 사용자 이름은 같은 모양에 규칙만 다르다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 사용자 이름을 타입으로 만든다 (R3)</h3>
+    <p class="why">같은 틀이다. 다른 점은 하나다. 이메일은 공백을 거부하고, 사용자 이름은 앞뒤 공백을 지운다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/domain/UsernameTests.java</b> — R3의 단위 테스트.</p>
+<pre class="diff"><span class="skip">… 앞의 13줄 (package, import, 주석) …</span><span class="add">class UsernameTests {</span><span class="add"></span><span class="add">	@ParameterizedTest</span><span class="add">	@NullSource</span><span class="add">	@ValueSource(strings = { "", " ", "\t\n" })</span><span class="add">	void r3_username_that_is_empty_is_rejected(String value) {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; new Username(value));</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r3_username_is_stored_without_surrounding_whitespace() {</span><span class="add">		assertThat(new Username("  jake \t").value()).isEqualTo("jake");</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r3_whitespace_inside_a_username_is_kept() {</span><span class="add">		assertThat(new Username("jake the dog").value()).isEqualTo("jake the dog");</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void usernames_that_differ_in_case_are_different() {</span><span class="add">		assertThat(new Username("Jake")).isNotEqualTo(new Username("jake"));</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>마지막 테스트의 이름에는 <code>r3_</code>이 없다. R3의 내용이 아니고 spec의 가정 2("사용자 이름은 대소문자를 구분한다")다.</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Username.java</b> — 값 객체.</p>
+<pre class="diff"><span class="add">package trealworld.domain;</span><span class="add"></span><span class="add">/**</span><span class="add"> * 사용자 이름. 비어 있지 않고, 앞뒤 공백이 없다. (R3)</span><span class="add"> */</span><span class="add">public record Username(String value) {</span><span class="add"></span><span class="add">	public Username {</span><span class="add">		if (value == null || value.isBlank()) {</span><span class="add">			throw new IllegalArgumentException("사용자 이름이 비어 있다");</span><span class="add">		}</span><span class="add">		value = value.strip();</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>여기서도 순서가 중요하다. <code>isBlank()</code>가 먼저다. 공백만 있는 값은 <code>strip()</code>의 전에 거부된다.</li>
+      <li><code>strip()</code>은 <code>trim()</code>과 다르다. 유니코드의 공백(전각 공백 등)도 지운다. NBSP는 지우지 않는다.</li>
+    </ul>
+    <p class="bridge">회원의 값 3개 중 2개가 타입이 됐다. 남은 하나는 규칙이 거의 없다. 그래도 타입으로 만든다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 비밀번호 해시에 이름을 준다</h3>
+    <p class="why">이 타입의 가치는 검사가 아니고 이름이다. <code>String</code>이면 원문과 해시를 구분할 수 없다. <code>PasswordHash</code>이면 구분된다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/domain/PasswordHashTests.java</b> — 형식 규칙의 테스트. 대응하는 R이 없어서 이름에 ID가 없다.</p>
+<pre class="diff"><span class="skip">… 앞의 13줄 (package, import, 주석) …</span><span class="add">class PasswordHashTests {</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void password_hash_keeps_its_value() {</span><span class="add">		assertThat(new PasswordHash("$2a$10$abcdefghijklmnopqrstuv").value()).isEqualTo("$2a$10$abcdefghijklmnopqrstuv");</span><span class="add">	}</span><span class="add"></span><span class="add">	@ParameterizedTest</span><span class="add">	@NullSource</span><span class="add">	@ValueSource(strings = { "", " " })</span><span class="add">	void password_hash_that_is_empty_is_rejected(String value) {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; new PasswordHash(value));</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <p class="file-role"><b>src/main/java/trealworld/domain/PasswordHash.java</b> — 값 객체.</p>
+<pre class="diff"><span class="add">package trealworld.domain;</span><span class="add"></span><span class="add">/**</span><span class="add"> * 비밀번호 해시. 비밀번호를 되돌릴 수 없게 바꾼 값이다. 비밀번호의 원문이 아니다. (R5)</span><span class="add"> */</span><span class="add">public record PasswordHash(String value) {</span><span class="add"></span><span class="add">	public PasswordHash {</span><span class="add">		if (value == null || value.isBlank()) {</span><span class="add">			throw new IllegalArgumentException("비밀번호 해시가 비어 있다");</span><span class="add">		}</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>BCrypt의 형식(<code>$2a$…</code>)은 검사하지 않는다. 검사하면 해시 기술이 <code>domain</code>에 들어온다.</li>
+      <li>그래서 이 생성자는 원문을 넣어도 막지 못한다. 리뷰 메모 3에서 다시 본다.</li>
+    </ul>
+    <p class="bridge">문 3개가 생겼다. 이제 문을 지난 값만 받는 회원을 만든다.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <h3>단계 4 — 값 객체 3개로 회원을 만든다 (R1, R5)</h3>
+    <p class="why">회원은 형식을 검사하지 않는다. 값 객체가 이미 했다. 회원이 할 일은 2개다: 셋이 다 있는가 (R1), 원문을 둘 자리가 없는가 (R5).</p>
+    <p class="file-role"><b>src/test/java/trealworld/domain/MemberTests.java</b> — R1과 R5의 단위 테스트.</p>
+<pre class="diff"><span class="skip">… 앞의 13줄 (package, import, 주석) …</span><span class="add">class MemberTests {</span><span class="add"></span><span class="add">	private static final Username USERNAME = new Username("jake");</span><span class="add">	private static final Email EMAIL = new Email("jake@example.com");</span><span class="add">	private static final PasswordHash PASSWORD_HASH = new PasswordHash("$2a$10$abcdefghijklmnopqrstuv");</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r1_member_has_username_email_and_password_hash() {</span><span class="add">		Member member = Member.register(USERNAME, EMAIL, PASSWORD_HASH);</span><span class="add"></span><span class="add">		assertThat(member.getUsername()).isEqualTo(USERNAME);</span><span class="add">		assertThat(member.getEmail()).isEqualTo(EMAIL);</span><span class="add">		assertThat(member.getPasswordHash()).isEqualTo(PASSWORD_HASH);</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r1_member_without_username_is_rejected() {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; Member.register(null, EMAIL, PASSWORD_HASH));</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r1_member_without_email_is_rejected() {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; Member.register(USERNAME, null, PASSWORD_HASH));</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r1_member_without_password_hash_is_rejected() {</span><span class="add">		assertThatIllegalArgumentException().isThrownBy(() -&gt; Member.register(USERNAME, EMAIL, null));</span><span class="add">	}</span><span class="add"></span><span class="add">	/**</span><span class="add">	 * 회원에는 글자를 그대로 담는 필드가 없다. 비밀번호의 원문을 둘 자리가 없다.</span><span class="add">	 */</span><span class="add">	@Test</span><span class="add">	void r5_member_has_no_field_that_can_hold_a_raw_password() {</span><span class="add">		assertThat(Arrays.stream(Member.class.getDeclaredFields()).map(Field::getType))</span><span class="add">				.isNotEmpty()</span><span class="add">				.noneMatch(type -&gt; CharSequence.class.isAssignableFrom(type) || type == char[].class</span><span class="add">						|| type == byte[].class);</span><span class="add">	}</span><span class="add"></span><span class="add">	@Test</span><span class="add">	void r5_member_keeps_the_password_only_as_a_password_hash() {</span><span class="add">		assertThat(Arrays.stream(Member.class.getDeclaredFields()).filter(field -&gt; field.getType() == PasswordHash.class))</span><span class="add">				.hasSize(1);</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>R1의 테스트 4개는 동작을 본다: 만든다, 빠뜨리면 거부한다.</li>
+      <li>R5의 테스트 2개는 <b>구조</b>를 본다. 리플렉션으로 필드의 타입을 읽는다. "저장하지 않는다"는 동작으로 확인할 수 없기 때문이다.</li>
+      <li>첫 R5 테스트는 글자를 담는 타입을 모두 금지한다. 필드의 이름은 보지 않는다. <code>String nickname</code>도 실패한다.</li>
+      <li>R5의 테스트는 빈 타입에서도 통과했다 (red 2에서 실패한 23개에 없다). 그래서 위반을 임시로 넣어서 실패를 확인했다: <code>String password</code> 필드를 더하면 첫 테스트가 실패한다.</li>
+    </ul>
+    <p class="file-role"><b>src/main/java/trealworld/domain/Member.java</b> — 애그리거트. 이 도메인의 중심이다.</p>
+<pre class="diff"><span class="add">package trealworld.domain;</span><span class="add"></span><span class="add">import lombok.Getter;</span><span class="add"></span><span class="add">/**</span><span class="add"> * 회원. 사용자 이름, 이메일, 비밀번호 해시가 항상 있다. (R1)</span><span class="add"> * 비밀번호의 원문은 가지지 않는다. (R5)</span><span class="add"> */</span><span class="add">@Getter</span><span class="add">public class Member {</span><span class="add"></span><span class="add">	private final Username username;</span><span class="add">	private final Email email;</span><span class="add">	private final PasswordHash passwordHash;</span><span class="add"></span><span class="add">	private Member(Username username, Email email, PasswordHash passwordHash) {</span><span class="add">		this.username = required(username, "회원에게 사용자 이름이 없다");</span><span class="add">		this.email = required(email, "회원에게 이메일이 없다");</span><span class="add">		this.passwordHash = required(passwordHash, "회원에게 비밀번호 해시가 없다");</span><span class="add">	}</span><span class="add"></span><span class="add">	public static Member register(Username username, Email email, PasswordHash passwordHash) {</span><span class="add">		return new Member(username, email, passwordHash);</span><span class="add">	}</span><span class="add"></span><span class="add">	private static &lt;T&gt; T required(T value, String message) {</span><span class="add">		if (value == null) {</span><span class="add">			throw new IllegalArgumentException(message);</span><span class="add">		}</span><span class="add">		return value;</span><span class="add">	}</span><span class="add"></span><span class="add">}</span></pre>
+    <ul>
+      <li>생성자가 <code>private</code>이다. 만드는 길은 <code>Member.register(…)</code> 하나다. 이름은 Domain 01의 용어 "가입 = <code>register</code>"에서 왔다.</li>
+      <li>필드가 <code>final</code>이다. "항상 있다"(R1)가 만든 뒤에도 유지된다.</li>
+      <li><code>@Getter</code>는 Lombok이다. 프로젝트에서 처음 쓴다. Java 25에서 동작한다는 것이 확인됐다.</li>
+      <li>없는 것 3개: 식별자(id), <code>@Entity</code>, <code>equals</code>. 요구하는 테스트가 아직 없다. 작업 4의 영속성 어댑터에서 정한다.</li>
+    </ul>
+    <p class="bridge"><code>domain</code>에 클래스가 4개 생겼다. 아키텍처 테스트의 규칙 1, 3이 이제 검사할 것이 있다.</p>
+  </div>
+
+  <div class="step" id="step5">
+    <h3>단계 5 — 아키텍처 테스트의 안전장치를 뗀다</h3>
+    <p class="why">작업 2의 리뷰에서 찾은 메모 1이다. plan에 적어 두었고, 이 작업의 검증 항목이 됐다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/ArchitectureTests.java</b> — ADR-0002의 규칙 1~5를 강제하는 테스트.</p>
+<pre class="diff"><span class="skip">… -31,5 +31,4 …</span><span class="ctx">				.should().dependOnClassesThat().resideInAnyPackage(APPLICATION, ADAPTER)</span><span class="ctx">				.as("ADR-0002 규칙 1: domain은 application과 adapter에 의존하지 않는다")</span><span class="del">				.allowEmptyShould(true)</span><span class="ctx">				.check(classes);</span><span class="ctx">	}</span><span class="skip">… -49,5 +48,4 …</span><span class="ctx">				.should().dependOnClassesThat().resideInAPackage("org.springframework..")</span><span class="ctx">				.as("ADR-0002 규칙 3: domain은 Spring에 의존하지 않는다")</span><span class="del">				.allowEmptyShould(true)</span><span class="ctx">				.check(classes);</span><span class="ctx">	}</span></pre>
+    <ul>
+      <li>지운 줄은 2개다. 규칙 1과 규칙 3이다. 둘 다 <code>domain</code>의 클래스를 검사한다.</li>
+      <li>규칙 2, 4, 5에는 남아 있다. <code>application</code>과 <code>adapter</code>가 아직 비어 있다. 작업 4에서 지운다.</li>
+      <li>확인한 것: 상수를 <code>trealworld.domian..</code>으로 바꾸면 규칙 1, 3이 실패한다. 지우기 전에는 통과했을 것이다.</li>
+    </ul>
+    <p class="bridge">작업 3의 검증 항목이 모두 끝났다. 다음 작업(가입)은 이 타입들을 유스케이스에서 쓴다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 그 밖의 변경</h2>
+  <ul class="other">
+    <li><code>docs/journal/2026-11-17.md</code> — 스텝 30(작업 3의 기록)과 스텝 31(커밋)을 더했다. +67줄.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>표시: <b>[확인]</b>은 실제 클래스를 실행해서 본 것이다. <b>[읽음]</b>은 코드에서 읽은 것이다. <b>[추정]</b>은 아직 일어나지 않은 일이다.</p>
+  <ol>
+    <li><b>보이지 않는 사용자 이름이 통과한다. [확인]</b> <code>new Username(" ")</code>(NBSP 하나)가 만들어진다. <code>​</code>(폭이 없는 공백), <code>﻿</code>도 같다. <code>isBlank()</code>가 이 글자들을 공백으로 보지 않는다. 결과: 화면에서 이름이 빈 회원이 생길 수 있다. R3 "비어 있지 않다"의 뜻을 정해야 한다.</li>
+    <li><b>이메일의 형식 검사가 느슨하다. [확인]</b> <code>a@b.c</code>, <code>jake@example..com</code>, <code>jake@exam　ple.com</code>(전각 공백 포함)이 통과한다. 정규식의 <code>\s</code>는 ASCII의 공백만 본다. 길이의 제한도 없다. R2의 "올바른 형식"이 무엇인지는 문서에 없다. AI가 정했다.</li>
+    <li><b><code>PasswordHash</code>는 원문을 막지 못한다. [확인]</b> <code>new PasswordHash("password123")</code>이 만들어진다. R5의 테스트는 <code>Member</code>의 필드의 타입만 본다. 원문을 <code>PasswordHash</code>에 싸서 넣으면 통과한다. <code>Object</code>나 다른 record로 감싼 필드도 통과한다 [읽음]. R5의 실제 보장은 작업 4의 해시 포트에서 생긴다.</li>
+    <li><b><code>PasswordHash</code>를 출력하면 해시가 보인다. [확인]</b> <code>toString()</code>의 결과는 <code>PasswordHash[value=$2a$10$abc]</code>다. record의 기본 동작이다. 로그에 이 객체를 넣으면 해시가 로그에 남는다. <code>Member</code>에는 <code>toString</code>이 없어서 회원을 출력할 때는 나가지 않는다.</li>
+    <li><b>같은 값의 회원 2명이 서로 다르다. [확인]</b> <code>Member.register(…)</code>를 같은 값으로 두 번 부르면 <code>equals</code>가 거짓이다. <code>Member</code>에 id와 <code>equals</code>가 없다. 지금은 문제가 없다. 작업 4에서 id를 넣을 때 정해야 한다.</li>
+    <li><b>예외의 타입이 정보를 싣지 않는다. [추정]</b> 모든 위반이 <code>IllegalArgumentException</code>이다. AC-1.2는 "어느 값이 문제인지 알려준다"를 요구한다. 지금은 메시지의 글자에만 있다. 작업 4에서 웹 어댑터가 이 타입을 통째로 422로 바꾸면, 라이브러리가 던진 <code>IllegalArgumentException</code>도 422가 된다.</li>
+    <li><b>"Spring 없이 돈다"를 지키는 테스트는 없다. [읽음]</b> <code>ArchitectureTests</code>는 테스트 클래스를 읽지 않는다 (<code>DO_NOT_INCLUDE_TESTS</code>). <code>domain</code>의 테스트에 <code>@SpringBootTest</code>를 붙여도 잡히지 않는다. 지금은 실행 시간(30개에 0.05초)과 import가 증거다.</li>
+  </ol>
+  <p>질문 하나: 이메일은 앞뒤 공백을 거부하고, 사용자 이름은 지운다. 복사해서 붙인 <code>"jake@example.com "</code>은 형식 오류가 된다. 의도한 차이인가? R2에 "지운다"가 없어서 이렇게 됐다.</p>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했다. 리뷰를 요청해도 된다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 절을 다시 읽고 한 번 더 풀어 본다."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기는 시험이 아니다. 아직 이해하지 못한 곳을 찾는 도구다. 규칙 하나: 다 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="c">
+      <p class="q-text"><code>new Email("Jake@Example.COM").equals(new Email("jake@example.com"))</code>의 결과와 이유는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">거짓이다. record의 equals는 생성자에 넣은 원래 인자를 비교한다.</button>
+        <button type="button" data-opt="b">참이다. Email이 equals를 재정의해서 대소문자를 무시한다.</button>
+        <button type="button" data-opt="c">참이다. 생성자가 필드에 넣기 전에 소문자로 바꾸고, record의 equals는 필드를 비교한다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>compact constructor에서 바꾼 값이 필드에 들어간다. 두 객체의 필드는 모두 "jake@example.com"이다. Email에는 equals를 재정의한 코드가 없다. 규칙을 생성자 한 곳에 두면 비교도 함께 해결된다.</p>
+        <a href="#step1">다시 읽기: 단계 1</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">이 커밋에는 비밀번호의 길이(R4: 8자 이상, 72바이트 이하)를 검사하는 코드가 없다. 가장 맞는 이유는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">도메인의 타입은 원문을 받지 않는다. 해시의 길이로는 원문의 길이를 알 수 없다. R4를 지키는 곳은 원문을 받는 "가입"이다.</button>
+        <button type="button" data-opt="b">BCrypt가 72바이트를 넘는 값을 스스로 거부한다. 따로 검사할 필요가 없다.</button>
+        <button type="button" data-opt="c">PasswordHash의 생성자가 길이를 검사한다. 이름이 다를 뿐이다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>Domain 01의 표에서 R4의 "지키는 곳"은 가입이다. Member와 PasswordHash는 원문을 본 적이 없다. PasswordHash의 생성자는 빈 값만 거부한다. 원문은 작업 4의 유스케이스에 처음 나타난다.</p>
+        <a href="#background">다시 읽기: 1. 먼저 알아야 할 것</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text"><code>Member</code>에 <code>private String nickname;</code> 필드를 더했다. 비밀번호와 관계가 없는 필드다. 테스트는 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">모두 통과한다. R5의 테스트는 이름에 password가 든 필드만 찾는다.</button>
+        <button type="button" data-opt="b"><code>r5_member_has_no_field_that_can_hold_a_raw_password</code>가 실패한다. 이 테스트는 필드의 이름이 아니고 타입을 본다.</button>
+        <button type="button" data-opt="c">R1의 테스트가 실패한다. 회원의 값이 4개가 됐기 때문이다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>첫 R5 테스트는 CharSequence, char[], byte[] 타입의 필드를 모두 금지한다. 의도와 관계없이 "글자를 그대로 담는 자리"가 생기면 실패한다. 새 값을 더하려면 Username처럼 값 객체로 만들어야 한다. R1의 테스트는 필드의 개수를 세지 않는다.</p>
+        <a href="#step4">다시 읽기: 단계 4</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text"><code>new Username(" ")</code>을 실행한다. 인자는 NBSP(줄 바꿈 없는 공백) 한 글자다. 결과는?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">거부된다. isBlank()가 모든 공백 글자를 빈 값으로 본다.</button>
+        <button type="button" data-opt="b">만들어진다. 값은 NBSP 한 글자 그대로다.</button>
+        <button type="button" data-opt="c">만들어진다. strip()이 NBSP를 지워서 값은 빈 문자열이다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>Java의 isBlank()와 strip()은 NBSP를 공백으로 보지 않는다. 검사도 통과하고, 지워지지도 않는다. 화면에서는 이름이 빈 회원으로 보인다. 전각 공백(　)은 반대로 거부된다. "비어 있지 않다"의 뜻이 코드의 공백 정의에 달려 있다.</p>
+        <a href="#review">다시 읽기: 6. 리뷰 메모 (1번)</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">누군가 패키지 <code>domain</code>을 <code>model</code>로 바꿨다. <code>ArchitectureTests</code>의 상수는 고치지 않았다. 이 커밋의 뒤에 아키텍처 테스트는 어떻게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">규칙 1, 3이 실패한다. 검사할 클래스가 없기 때문이다. 이 커밋의 전에는 통과했을 것이다.</button>
+        <button type="button" data-opt="b">5개가 모두 통과한다. 위반한 의존이 없기 때문이다.</button>
+        <button type="button" data-opt="c">5개가 모두 실패한다. 패키지의 구조가 바뀌었기 때문이다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>규칙 1, 3에서 allowEmptyShould(true)를 지웠다. 이제 "검사한 클래스가 없다"는 실패다. 규칙 2, 4, 5에는 아직 남아 있어서 통과한다. 지우기 전에는 5개가 모두 초록이었을 것이고, domain의 규칙은 아무것도 지키지 않게 됐을 것이다.</p>
+        <a href="#step5">다시 읽기: 단계 5</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+<script>
+/* 위젯. Email, Username, PasswordHash의 compact constructor를 옮겼다 (src/main/java/trealworld/domain/). */
+/* LOGIC-START */
+// java.lang.Character.isWhitespace(int)
+function isJavaWhitespace(cp){
+  if((cp>=0x09&&cp<=0x0D)||(cp>=0x1C&&cp<=0x1F)) return true;
+  if(cp===0x00A0||cp===0x2007||cp===0x202F) return false;            // non-breaking: 공백이 아니다
+  return cp===0x20||cp===0x1680||(cp>=0x2000&&cp<=0x200A)||cp===0x2028||cp===0x2029||cp===0x205F||cp===0x3000;
+}
+function isBlank(s){ return Array.from(s).every(function(c){return isJavaWhitespace(c.codePointAt(0));}); }
+function strip(s){
+  var a=Array.from(s), i=0, j=a.length;
+  while(i<j&&isJavaWhitespace(a[i].codePointAt(0))) i++;
+  while(j>i&&isJavaWhitespace(a[j-1].codePointAt(0))) j--;
+  return a.slice(i,j).join('');
+}
+// Email.FORMAT: "[^@\\s]+@[^@\\s]+\\.[^@\\s]+" + matches(). Java의 \s는 [ \t\n\x0B\f\r]이다.
+var EMAIL_FORMAT=/^[^@ \t\n\x0B\f\r]+@[^@ \t\n\x0B\f\r]+\.[^@ \t\n\x0B\f\r]+$/;
+function newEmail(value){
+  if(value===null||!EMAIL_FORMAT.test(value)) throw new Error("이메일의 형식이 올바르지 않다");
+  return value.toLowerCase();                                        // toLowerCase(Locale.ROOT)
+}
+function newUsername(value){
+  if(value===null||isBlank(value)) throw new Error("사용자 이름이 비어 있다");
+  return strip(value);
+}
+function newPasswordHash(value){
+  if(value===null||isBlank(value)) throw new Error("비밀번호 해시가 비어 있다");
+  return value;
+}
+function shown(s){
+  if(s===null) return 'null';
+  return '"'+Array.from(s).map(function(c){
+    var cp=c.codePointAt(0);
+    if(cp<0x20||isJavaWhitespace(cp)&&cp!==0x20||cp===0x00A0||cp===0x2007||cp===0x202F||cp===0x200B||cp===0xFEFF)
+      return '\\u'+('000'+cp.toString(16).toUpperCase()).slice(-4);
+    return c;
+  }).join('')+'"';
+}
+/* LOGIC-END */
+(function(){
+  var input=document.getElementById('w-in'); if(!input) return;
+  var current=input.value;
+  var samples=[
+    ['Jake@Example.COM','Jake@Example.COM'],['"  jake \\t"','  jake \t'],['jake the dog','jake the dog'],
+    ['a@b.c','a@b.c'],['jake@example..com','jake@example..com'],['NBSP 하나',' '],['전각 공백 하나','　'],
+    ['jake@exam\\u3000ple.com','jake@exam　ple.com'],['password123','password123'],['빈 문자열',''],['null',null]
+  ];
+  var types=[['email',newEmail],['username',newUsername],['hash',newPasswordHash]];
+  function render(){
+    document.getElementById('w-shown').textContent=shown(current);
+    types.forEach(function(t){
+      var r=document.getElementById('w-'+t[0]+'-r'), v=document.getElementById('w-'+t[0]+'-v');
+      try{ var out=t[1](current); r.textContent='만들어짐'; r.className='yes'; v.textContent=shown(out); }
+      catch(e){ r.textContent='거부'; r.className='no'; v.textContent=e.message; }
+    });
+  }
+  var box=document.getElementById('w-samples');
+  samples.forEach(function(s){
+    var b=document.createElement('button'); b.type='button'; b.textContent=s[0];
+    b.addEventListener('click',function(){ current=s[1]; input.value=s[1]===null?'':s[1]; render(); });
+    box.appendChild(b);
+  });
+  input.addEventListener('input',function(){ current=input.value; render(); });
+  render();
+})();
+</script>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
