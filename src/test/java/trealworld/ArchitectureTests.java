@@ -30,7 +30,6 @@ class ArchitectureTests {
 		noClasses().that().resideInAPackage(DOMAIN)
 				.should().dependOnClassesThat().resideInAnyPackage(APPLICATION, ADAPTER)
 				.as("ADR-0002 규칙 1: domain은 application과 adapter에 의존하지 않는다")
-				.allowEmptyShould(true)
 				.check(classes);
 	}
 
@@ -48,7 +47,6 @@ class ArchitectureTests {
 		noClasses().that().resideInAPackage(DOMAIN)
 				.should().dependOnClassesThat().resideInAPackage("org.springframework..")
 				.as("ADR-0002 규칙 3: domain은 Spring에 의존하지 않는다")
-				.allowEmptyShould(true)
 				.check(classes);
 	}
 
