@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class TrealworldApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void adr0001_the_application_starts() {
 	}
 
 }

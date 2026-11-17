@@ -63,7 +63,7 @@ class PasswordTests {
 	}
 
 	@Test
-	void password_does_not_show_its_value_as_text() {
+	void r5_password_does_not_show_its_value_as_text() {
 		assertThat(new Password("correct-horse-battery").toString()).doesNotContain("correct-horse-battery");
 	}
 

@@ -31,8 +31,31 @@ class UsernameTests {
 	}
 
 	@Test
-	void usernames_that_differ_in_case_are_different() {
+	void r7_usernames_that_differ_in_case_are_different() {
 		assertThat(new Username("Jake")).isNotEqualTo(new Username("jake"));
+	}
+
+	@Test
+	void r3_username_of_50_characters_is_accepted() {
+		assertThat(new Username("a".repeat(50)).value()).hasSize(50);
+	}
+
+	@Test
+	void r3_username_of_51_characters_is_rejected() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new Username("a".repeat(51)));
+	}
+
+	/** 길이는 앞뒤 공백을 지운 뒤에 센다. */
+	@Test
+	void r3_the_length_is_counted_after_the_surrounding_whitespace_is_removed() {
+		assertThat(new Username("  " + "a".repeat(50) + "  ").value()).hasSize(50);
+	}
+
+	/** 한 자는 코드 포인트 하나다. 이모지 하나는 한 자다. */
+	@Test
+	void r3_characters_are_counted_as_code_points() {
+		assertThat(new Username("😀".repeat(50)).value()).isEqualTo("😀".repeat(50));
+		assertThatIllegalArgumentException().isThrownBy(() -> new Username("😀".repeat(51)));
 	}
 
 }

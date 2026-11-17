@@ -95,7 +95,7 @@ class LoginServiceTests {
 	/** AC-2.4: 값의 오류는 로그인의 실패와 다른 예외다. */
 	@ParameterizedTest
 	@NullAndEmptySource
-	void an_empty_password_is_an_invalid_value(String password) {
+	void ac2_4_an_empty_password_is_an_invalid_value(String password) {
 		InvalidValuesException exception = catchThrowableOfType(InvalidValuesException.class,
 				() -> service.login(new LoginCommand("jake@example.com", password)));
 
@@ -105,7 +105,7 @@ class LoginServiceTests {
 	@ParameterizedTest
 	@NullAndEmptySource
 	@ValueSource(strings = { "   ", "jake", "jake@example" })
-	void an_empty_email_or_an_email_with_an_invalid_format_is_an_invalid_value(String email) {
+	void ac2_4_an_empty_email_or_an_email_with_an_invalid_format_is_an_invalid_value(String email) {
 		InvalidValuesException exception = catchThrowableOfType(InvalidValuesException.class,
 				() -> service.login(new LoginCommand(email, PASSWORD)));
 
@@ -113,7 +113,7 @@ class LoginServiceTests {
 	}
 
 	@Test
-	void every_invalid_value_is_named() {
+	void ac2_4_every_invalid_value_is_named() {
 		InvalidValuesException exception = catchThrowableOfType(InvalidValuesException.class,
 				() -> service.login(new LoginCommand(null, null)));
 
@@ -122,7 +122,7 @@ class LoginServiceTests {
 
 	/** 값이 틀리면 저장소에 묻지 않는다. */
 	@Test
-	void invalid_values_are_reported_before_the_member_is_looked_up() {
+	void ac2_4_invalid_values_are_reported_before_the_member_is_looked_up() {
 		assertThatExceptionOfType(InvalidValuesException.class)
 				.isThrownBy(() -> service.login(new LoginCommand("jake@example.com", "")));
 

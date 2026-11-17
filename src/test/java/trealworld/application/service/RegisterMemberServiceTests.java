@@ -34,7 +34,7 @@ class RegisterMemberServiceTests {
 	private final RegisterMemberService service = new RegisterMemberService(members, passwordHasher);
 
 	@Test
-	void registering_saves_a_member_and_returns_it() {
+	void ac1_1_registering_saves_a_member_and_returns_it() {
 		Member member = service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));
 
 		assertThat(member.getUsername()).isEqualTo(new Username("jake"));
@@ -101,7 +101,7 @@ class RegisterMemberServiceTests {
 	}
 
 	@Test
-	void every_invalid_value_is_named() {
+	void ac1_2_every_invalid_value_is_named() {
 		InvalidValuesException exception = catchThrowableOfType(InvalidValuesException.class,
 				() -> service.register(new RegisterMemberCommand(" ", "jake@", null)));
 
@@ -110,7 +110,7 @@ class RegisterMemberServiceTests {
 
 	/** 값의 오류가 먼저다. 값이 틀리면 저장소에 묻지 않는다. */
 	@Test
-	void invalid_values_are_reported_before_duplicates() {
+	void ac1_2_invalid_values_are_reported_before_duplicates() {
 		service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));
 
 		assertThatExceptionOfType(InvalidValuesException.class)
@@ -141,13 +141,17 @@ class RegisterMemberServiceTests {
 		assertThat(exception.getField()).isEqualTo("username");
 	}
 
-	/** 저장소가 거부했지만 이메일도 사용자 이름도 없다. 중복이 아니다. 숨기지 않고 그대로 던진다. */
+	/**
+	 * 저장소가 거부했지만 이메일도 사용자 이름도 없다. 중복이 아니다. 숨기지 않는다.
+	 * 나가는 포트의 예외는 유스케이스의 밖으로 나가지 않는다. (ADR-0002)
+	 */
 	@Test
-	void a_rejected_save_that_is_not_a_duplicate_is_not_reported_as_a_duplicate() {
+	void r6_r7_a_rejected_save_that_is_not_a_duplicate_is_not_reported_as_a_duplicate() {
 		members.rejectsNextSave = true;
 
-		assertThatExceptionOfType(MemberNotUniqueException.class)
-				.isThrownBy(() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD)));
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD)))
+				.withCauseInstanceOf(MemberNotUniqueException.class);
 	}
 
 	private static class FakeMemberRepository implements MemberRepository {

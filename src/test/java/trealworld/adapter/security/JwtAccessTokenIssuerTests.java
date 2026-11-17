@@ -31,7 +31,7 @@ class JwtAccessTokenIssuerTests {
 	private final JwtAccessTokenIssuer issuer = new JwtAccessTokenIssuer(SECRET, Clock.fixed(NOW, ZoneOffset.UTC));
 
 	@Test
-	void the_token_is_a_jwt_signed_with_the_secret() throws Exception {
+	void adr0003_the_token_is_a_jwt_signed_with_the_secret() throws Exception {
 		SignedJWT jwt = SignedJWT.parse(issuer.issue(member(7L)).value());
 
 		assertThat(jwt.getHeader().getAlgorithm()).isEqualTo(JWSAlgorithm.HS256);
@@ -42,7 +42,7 @@ class JwtAccessTokenIssuerTests {
 
 	/** ADR-0003: 토큰에는 회원의 식별자와 만료 시각만 넣는다. */
 	@Test
-	void the_token_has_only_the_id_of_the_member_and_the_expiry() throws Exception {
+	void adr0003_the_token_has_only_the_id_of_the_member_and_the_expiry() throws Exception {
 		SignedJWT jwt = SignedJWT.parse(issuer.issue(member(7L)).value());
 
 		assertThat(jwt.getJWTClaimsSet().getClaims()).containsOnlyKeys("sub", "exp");
@@ -51,7 +51,7 @@ class JwtAccessTokenIssuerTests {
 
 	/** ADR-0003: 유효 시간은 1시간이다. 시각은 주입한 Clock에서 읽는다. */
 	@Test
-	void the_token_expires_one_hour_after_it_is_issued() throws Exception {
+	void adr0003_the_token_expires_one_hour_after_it_is_issued() throws Exception {
 		SignedJWT jwt = SignedJWT.parse(issuer.issue(member(7L)).value());
 
 		assertThat(jwt.getJWTClaimsSet().getExpirationTime().toInstant()).isEqualTo(NOW.plusSeconds(3600));
@@ -59,14 +59,14 @@ class JwtAccessTokenIssuerTests {
 
 	/** AC-1.7과 같은 뜻: 토큰에 사용자 이름, 이메일, 비밀번호 해시가 없다. */
 	@Test
-	void the_token_does_not_carry_the_values_of_the_member() throws Exception {
+	void adr0003_the_token_does_not_carry_the_values_of_the_member() throws Exception {
 		String payload = SignedJWT.parse(issuer.issue(member(7L)).value()).getPayload().toString();
 
 		assertThat(payload).doesNotContain("jake").doesNotContain("example.com").doesNotContain("stored-hash");
 	}
 
 	@Test
-	void tokens_of_different_members_differ() {
+	void adr0003_tokens_of_different_members_differ() {
 		AccessToken jake = issuer.issue(member(7L));
 		AccessToken finn = issuer.issue(member(8L));
 
@@ -74,19 +74,19 @@ class JwtAccessTokenIssuerTests {
 	}
 
 	@Test
-	void a_member_that_is_not_saved_gets_no_token() {
+	void adr0003_a_member_that_is_not_saved_gets_no_token() {
 		assertThatIllegalArgumentException().isThrownBy(() -> issuer.issue(member(null)));
 	}
 
 	@Test
-	void a_secret_shorter_than_32_bytes_is_rejected() {
+	void adr0003_a_secret_shorter_than_32_bytes_is_rejected() {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> new JwtAccessTokenIssuer("too-short", Clock.systemUTC()));
 	}
 
 	/** 키가 없으면 임의의 키를 만든다. 인스턴스마다 키가 다르다. */
 	@Test
-	void without_a_secret_a_random_key_is_used() throws Exception {
+	void adr0003_without_a_secret_a_random_key_is_used() throws Exception {
 		JwtAccessTokenIssuer first = new JwtAccessTokenIssuer("", Clock.fixed(NOW, ZoneOffset.UTC));
 		JwtAccessTokenIssuer second = new JwtAccessTokenIssuer("", Clock.fixed(NOW, ZoneOffset.UTC));
 

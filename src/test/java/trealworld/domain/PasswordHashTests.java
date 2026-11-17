@@ -14,14 +14,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 class PasswordHashTests {
 
 	@Test
-	void password_hash_keeps_its_value() {
+	void r1_password_hash_keeps_its_value() {
 		assertThat(new PasswordHash("$2a$10$abcdefghijklmnopqrstuv").value()).isEqualTo("$2a$10$abcdefghijklmnopqrstuv");
 	}
 
 	@ParameterizedTest
 	@NullSource
 	@ValueSource(strings = { "", " " })
-	void password_hash_that_is_empty_is_rejected(String value) {
+	void r1_password_hash_that_is_empty_is_rejected(String value) {
 		assertThatIllegalArgumentException().isThrownBy(() -> new PasswordHash(value));
 	}
 

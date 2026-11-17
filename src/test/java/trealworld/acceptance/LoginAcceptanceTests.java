@@ -72,7 +72,8 @@ class LoginAcceptanceTests {
 				.expectStatus().isUnauthorized()
 				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
 				.expectBody()
-				.jsonPath("$.accessToken").doesNotExist();
+				.jsonPath("$.accessToken").doesNotExist()
+				.jsonPath("$.errors").doesNotExist();
 	}
 
 	@Test
@@ -165,9 +166,9 @@ class LoginAcceptanceTests {
 				.jsonPath("$.accessToken").isNotEmpty();
 	}
 
-	/** 로그인의 어떤 결과에도 비밀번호와 비밀번호 해시가 없다. 목표 1의 AC-1.7과 같은 뜻이다. */
+	/** AC-1.7은 "어떤 결과에도"다. 로그인의 결과도 들어간다. */
 	@Test
-	void no_result_of_a_login_has_the_password_or_the_password_hash() {
+	void ac1_7_no_result_of_a_login_has_the_password_or_the_password_hash() {
 		String hash = new JdbcTemplate(dataSource).queryForObject("select password_hash from member where email = ?",
 				String.class, email);
 
@@ -197,6 +198,15 @@ class LoginAcceptanceTests {
 
 	private static String contentTypeOf(RestTestClient.ResponseSpec response) {
 		return String.valueOf(response.returnResult().getResponseHeaders().getContentType());
+	}
+
+	/** 이메일이 될 수 없는 값은 값의 오류다. 길이도 같다. (R2) */
+	@Test
+	void ac2_4_an_email_longer_than_254_characters_is_rejected_as_an_invalid_value() {
+		login("a".repeat(255 - "@example.com".length()) + "@example.com", PASSWORD)
+				.expectStatus().isBadRequest()
+				.expectBody()
+				.jsonPath("$.errors.email").exists();
 	}
 
 }

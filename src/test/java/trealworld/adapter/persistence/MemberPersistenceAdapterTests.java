@@ -85,4 +85,16 @@ class MemberPersistenceAdapterTests {
 		return Member.register(new Username(username), new Email(email), new PasswordHash("hash"));
 	}
 
+	/** R2, R3의 가장 긴 값을 DB가 받아들인다. */
+	@Test
+	void r2_r3_the_longest_username_and_email_are_saved() {
+		String username = "가".repeat(50 - id.length()) + id;
+		String email = "a".repeat(254 - ("-" + id + "@example.com").length()) + "-" + id + "@example.com";
+
+		Member saved = members.save(member(username, email));
+
+		assertThat(members.findByEmail(new Email(email))).hasValueSatisfying(
+				found -> assertThat(found.getUsername()).isEqualTo(saved.getUsername()));
+	}
+
 }

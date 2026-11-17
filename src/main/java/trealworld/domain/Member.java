@@ -26,11 +26,11 @@ public class Member {
 	private Long id;
 
 	@Embedded
-	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true))
+	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true, length = Username.MAX_CHARACTERS))
 	private Username username;
 
 	@Embedded
-	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true))
+	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true, length = Email.MAX_CHARACTERS))
 	private Email email;
 
 	@Embedded

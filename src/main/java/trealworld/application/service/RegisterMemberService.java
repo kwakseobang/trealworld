@@ -48,7 +48,8 @@ public class RegisterMemberService implements RegisterMemberUseCase {
 		catch (MemberNotUniqueException exception) {
 			// 확인과 저장의 사이에 다른 가입이 같은 값을 저장했다. 어느 값인지 다시 묻는다.
 			rejectDuplicate(email, username);
-			throw exception;
+			// 중복이 아니다. 숨기지 않는다. 나가는 포트의 예외는 유스케이스의 밖으로 내보내지 않는다. (ADR-0002)
+			throw new IllegalStateException("회원을 저장하지 못했다", exception);
 		}
 	}
 

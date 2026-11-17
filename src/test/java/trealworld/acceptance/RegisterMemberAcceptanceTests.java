@@ -247,4 +247,42 @@ class RegisterMemberAcceptanceTests {
 				String.class, email);
 	}
 
+	@Test
+	void ac1_9_a_username_longer_than_50_characters_is_rejected_and_the_field_is_named() {
+		register("a".repeat(51 - id.length()) + id, email, PASSWORD)
+				.expectStatus().isBadRequest()
+				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+				.expectBody()
+				.jsonPath("$.errors.username").exists()
+				.jsonPath("$.errors.length()").isEqualTo(1);
+	}
+
+	@Test
+	void ac1_9_an_email_longer_than_254_characters_is_rejected_and_the_field_is_named() {
+		register(username, emailOfLength(255), PASSWORD)
+				.expectStatus().isBadRequest()
+				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+				.expectBody()
+				.jsonPath("$.errors.email").exists()
+				.jsonPath("$.errors.length()").isEqualTo(1);
+	}
+
+	/** 한계의 길이는 받아들인다. 저장도 된다. (AC-1.1) */
+	@Test
+	void ac1_9_a_username_of_50_characters_and_an_email_of_254_characters_are_accepted() {
+		String longestUsername = "a".repeat(50 - id.length()) + id;
+		String longestEmail = emailOfLength(254);
+
+		register(longestUsername, longestEmail, PASSWORD)
+				.expectStatus().isCreated()
+				.expectBody()
+				.jsonPath("$.username").isEqualTo(longestUsername)
+				.jsonPath("$.email").isEqualTo(longestEmail);
+	}
+
+	private String emailOfLength(int length) {
+		String end = "-" + id + "@example.com";
+		return "a".repeat(length - end.length()) + end;
+	}
+
 }

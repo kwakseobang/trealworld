@@ -36,4 +36,18 @@ class EmailTests {
 		assertThat(new Email("JAKE@example.com")).isEqualTo(new Email("jake@EXAMPLE.com"));
 	}
 
+	@Test
+	void r2_email_of_254_characters_is_accepted() {
+		String email = "a".repeat(254 - "@example.com".length()) + "@example.com";
+
+		assertThat(new Email(email).value()).hasSize(254);
+	}
+
+	@Test
+	void r2_email_of_255_characters_is_rejected() {
+		String email = "a".repeat(255 - "@example.com".length()) + "@example.com";
+
+		assertThatIllegalArgumentException().isThrownBy(() -> new Email(email));
+	}
+
 }

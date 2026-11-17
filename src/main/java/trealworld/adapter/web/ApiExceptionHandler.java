@@ -41,4 +41,14 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
 	}
 
+	/**
+	 * 예상하지 못한 오류 → 500. 본문은 같은 형식이다. (ADR-0005)
+	 * 원인은 로그에만 남긴다. 본문에 넣지 않는다. 원인의 글에 저장된 값이 들어 있는 경우가 있다. (AC-1.7)
+	 */
+	@ExceptionHandler(Exception.class)
+	ProblemDetail unexpected(Exception exception) {
+		logger.error("예상하지 못한 오류", exception);
+		return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 오류가 났다");
+	}
+
 }
