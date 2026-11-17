@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>토큰 문지기 — JWT를 게임으로</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F6F4EE; --card:#FFFFFF; --fg:#15171C; --muted:#5A606C; --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD; --warn:#E2572B; --warn-soft:#FCEBE4;
+  --ok:#1E6B3A; --ok-soft:#E3F1E6; --code-bg:#EFECE4; --hl:#FFF0B8;
+  --c-head:#B8401C; --c-body:#6B3FB5; --c-sig:#1E6B8A;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A; --warn:#F08A63; --warn-soft:#3A2219;
+    --ok:#8FD6A4; --ok-soft:#16301F; --code-bg:#1A1C22; --hl:#4A4220;
+    --c-head:#F5A285; --c-body:#C4A6F5; --c-sig:#8FD0E6;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+main{max-width:760px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0}
+h2{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+h3{font-size:1rem;font-weight:700;margin:18px 0 6px}
+p{margin:8px 0}
+code,.mono{font:0.86em var(--mono)}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.kicker{font:700 12px var(--mono);letter-spacing:.08em;color:var(--accent);margin:0}
+.hud{display:flex;gap:8px;align-items:center;font:600 13px var(--sans)}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 12px;white-space:nowrap}
+.pill b{font-family:var(--mono)}
+.acts{display:flex;gap:6px;margin:0 0 16px}
+.acts span{flex:1;font:600 12px var(--sans);text-align:center;padding:6px 4px;border-radius:8px;background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.acts span.on{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.acts span.done{background:var(--ok-soft);border-color:var(--ok);color:var(--fg)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:12px 0}
+.role{display:inline-block;font:700 12px var(--sans);background:var(--fg);color:var(--bg);border-radius:6px;padding:2px 8px;margin-bottom:8px}
+.say{background:var(--accent-soft);border-radius:10px;padding:10px 14px;margin:10px 0}
+.good{background:var(--ok-soft);border-left:4px solid var(--ok);border-radius:8px;padding:10px 14px;margin:10px 0}
+.bad{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:10px 0}
+.learn{background:var(--hl);border-radius:8px;padding:10px 14px;margin:10px 0;font-weight:600}
+.small{font-size:13px;color:var(--muted)}
+button{font:600 15px var(--sans);color:var(--fg);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;text-align:center}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) button.primary{color:#15171C} }
+button.pick{display:block;width:100%;margin:6px 0}
+button.right{border-color:var(--ok);background:var(--ok-soft)}
+button.wrong{border-color:var(--warn);background:var(--warn-soft)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{font:600 14px var(--sans);padding:8px 12px;border-radius:999px}
+.chip.sel{background:var(--accent-soft);border-color:var(--accent)}
+.token{font:13px/1.6 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere;word-break:break-all;margin:8px 0}
+.t-h{color:var(--c-head);font-weight:700}.t-b{color:var(--c-body);font-weight:700}.t-s{color:var(--c-sig);font-weight:700}
+.kv{display:grid;grid-template-columns:7.5em 1fr;gap:4px 10px;font-size:14px;margin:8px 0}
+.kv dt{font-weight:700;color:var(--muted)} .kv dd{margin:0;font-family:var(--mono);font-size:13px;overflow-wrap:anywhere;word-break:break-all}
+label.f{display:grid;grid-template-columns:6em 1fr;gap:8px;align-items:center;font:600 14px var(--sans);margin:8px 0}
+label.f input,label.f select{min-width:0;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.badge{font:600 12px var(--sans);border:1px dashed var(--line);border-radius:8px;padding:5px 9px;color:var(--muted)}
+.badge.got{border-style:solid;border-color:var(--ok);background:var(--ok-soft);color:var(--fg)}
+.timer{height:8px;background:var(--code-bg);border-radius:99px;overflow:hidden;margin:10px 0}
+.timer i{display:block;height:100%;width:100%;background:var(--accent);transition:width .25s linear}
+.timer i.low{background:var(--warn)}
+.who{font-size:2rem;line-height:1}
+.req{display:flex;gap:12px;align-items:flex-start}
+.verdicts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.verdicts button{text-align:center;font-weight:700;padding:14px 6px}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tools button{font-size:13px;padding:6px 10px}
+.toolout{font:13px/1.6 var(--mono);background:var(--code-bg);border-radius:8px;padding:8px 12px;margin:6px 0;overflow-wrap:anywhere;word-break:break-all;white-space:pre-wrap}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--code-bg)}
+td code{word-break:break-all}
+.big{font-size:2.4rem;font-weight:800;font-family:var(--mono);margin:6px 0}
+.center{text-align:center}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div><p class="kicker">TREALWORLD · 보안 훈련</p><h1>토큰 문지기</h1></div>
+    <div class="hud"><span class="pill">점수 <b id="score">0</b></span><span class="pill" id="streakPill" hidden>연속 <b id="streak">0</b></span></div>
+  </div>
+  <div class="acts" id="acts"><span>1막 · 발급소</span><span>2막 · 해커</span><span>3막 · 문지기</span></div>
+  <div id="stage"></div>
+</main>
+
+<script>
+/* ============================================================
+   CRYPTO — 실제 SHA-256과 HMAC-SHA256. 이 서비스의 JwtAccessTokenIssuer와 같은 서명(HS256)을 만든다.
+   ============================================================ */
+var K256=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256(m){
+  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var l=m.length, n=((l+9+63)>>6)<<6, p=new Uint8Array(n); p.set(m); p[l]=0x80;
+  var dv=new DataView(p.buffer); dv.setUint32(n-8,Math.floor(l/536870912)); dv.setUint32(n-4,(l*8)>>>0);
+  var w=new Uint32Array(64);
+  for(var i=0;i<n;i+=64){
+    var t,a,b;
+    for(t=0;t<16;t++) w[t]=dv.getUint32(i+t*4);
+    for(t=16;t<64;t++){ a=w[t-15]; b=w[t-2];
+      w[t]=(w[t-16]+((a>>>7|a<<25)^(a>>>18|a<<14)^(a>>>3))+w[t-7]+((b>>>17|b<<15)^(b>>>19|b<<13)^(b>>>10)))>>>0; }
+    var A=H[0],B=H[1],C=H[2],D=H[3],E=H[4],F=H[5],G=H[6],Z=H[7];
+    for(t=0;t<64;t++){
+      var t1=(Z+((E>>>6|E<<26)^(E>>>11|E<<21)^(E>>>25|E<<7))+((E&F)^(~E&G))+K256[t]+w[t])>>>0;
+      var t2=(((A>>>2|A<<30)^(A>>>13|A<<19)^(A>>>22|A<<10))+((A&B)^(A&C)^(B&C)))>>>0;
+      Z=G;G=F;F=E;E=(D+t1)>>>0;D=C;C=B;B=A;A=(t1+t2)>>>0;
+    }
+    H[0]=(H[0]+A)>>>0;H[1]=(H[1]+B)>>>0;H[2]=(H[2]+C)>>>0;H[3]=(H[3]+D)>>>0;H[4]=(H[4]+E)>>>0;H[5]=(H[5]+F)>>>0;H[6]=(H[6]+G)>>>0;H[7]=(H[7]+Z)>>>0;
+  }
+  var out=new Uint8Array(32), ov=new DataView(out.buffer);
+  for(i=0;i<8;i++) ov.setUint32(i*4,H[i]);
+  return out;
+}
+function utf8(s){ return new TextEncoder().encode(s); }
+function hmacSha256(key,msg){
+  if(key.length>64) key=sha256(key);
+  var k=new Uint8Array(64); k.set(key);
+  var ip=new Uint8Array(64+msg.length), op=new Uint8Array(96);
+  for(var i=0;i<64;i++){ ip[i]=k[i]^0x36; op[i]=k[i]^0x5c; }
+  ip.set(msg,64); op.set(sha256(ip),64);
+  return sha256(op);
+}
+function b64url(bytes){ var s=''; for(var i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
+function b64urlToText(s){ try{ var b=atob(s.replace(/-/g,'+').replace(/_/g,'/')), u=new Uint8Array(b.length);
+  for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return new TextDecoder().decode(u); }catch(e){ return null; } }
+function signature(secret,signingInput){ return b64url(hmacSha256(utf8(secret),utf8(signingInput))); }
+function makeToken(secret,header,payload){
+  var input=b64url(utf8(JSON.stringify(header)))+'.'+b64url(utf8(JSON.stringify(payload)));
+  return input+'.'+(secret==null?'':signature(secret,input));
+}
+
+/* ============================================================
+   SERVER — 이 서비스의 필터와 같은 순서로 판정한다.
+   방화벽 → Bearer 토큰의 필터(서명, 만료, sub, 회원) → 인가 → 컨트롤러
+   ============================================================ */
+var SECRET='k7Qp2vX9mR4tL8wZ1nB6cY3hJ5dF0sGa-trealworld';   /* 서버만 안다. 32바이트 이상이다 */
+var NOW=1794920400;                                         /* 게임의 "지금". 화면에는 14:00:00으로 보인다 */
+var VALIDITY=3600;
+var MEMBERS={'1':{username:'jake',email:'jake@example.com'}, '2':{username:'finn',email:'finn@example.com'}};
+var DENIED={detail:'액세스 토큰이 없거나 유효하지 않다',status:401,title:'Unauthorized'};
+function server(request, secret){
+  secret=secret||SECRET;
+  var path=request.path.split('?')[0], deny=function(stage){ return {status:401,stage:stage,body:DENIED}; };
+  if(/;|\/\/|%2e/i.test(path)) return {status:400,stage:'firewall',body:{detail:'요청을 받아들일 수 없다',status:400,title:'Bad Request'}};
+  var who=null;
+  if(request.token!=null){
+    var parts=request.token.split('.');
+    if(parts.length!==3) return deny('parse');
+    var header, payload;
+    try{ header=JSON.parse(b64urlToText(parts[0])); payload=JSON.parse(b64urlToText(parts[1])); }catch(e){ return deny('parse'); }
+    if(!header || header.alg!=='HS256') return deny('alg');
+    if(signature(secret,parts[0]+'.'+parts[1])!==parts[2]) return deny('signature');
+    if(typeof payload.exp!=='number' || NOW>payload.exp) return deny('expiry');
+    if(typeof payload.sub!=='string' || !/^[0-9]{1,18}$/.test(payload.sub)) return deny('subject');
+    who=String(Number(payload.sub));
+    if(!MEMBERS[who]) return deny('member');
+  }
+  var isPublic=request.method==='POST' && (path==='/api/members' || path==='/api/auth/login');
+  if(!who && !isPublic) return deny('authorize');
+  if(request.method==='GET' && path==='/api/members/me') return {status:200,stage:'controller',who:who,body:MEMBERS[who]};
+  if(isPublic) return {status:'pass',stage:'controller',who:who,body:null};
+  return {status:404,stage:'controller',who:who,body:{detail:'요청한 자원이 없다',status:404,title:'Not Found'}};
+}
+
+/* ============================================================
+   GAME
+   ============================================================ */
+var $=function(id){ return document.getElementById(id); };
+var stage=$('stage'), state={score:0,streak:0,act:0};
+function el(tag,attrs,children){
+  var e=document.createElement(tag); attrs=attrs||{};
+  Object.keys(attrs).forEach(function(k){ if(k==='class') e.className=attrs[k]; else if(k==='html') e.innerHTML=attrs[k];
+    else if(k==='text') e.textContent=attrs[k]; else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2),attrs[k]); else e.setAttribute(k,attrs[k]); });
+  (children||[]).forEach(function(c){ if(c!=null) e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+function addScore(n){ state.score+=n; $('score').textContent=state.score; }
+function setAct(i){ state.act=i; Array.prototype.forEach.call($('acts').children,function(s,j){ s.className=j<i?'done':j===i?'on':''; }); window.scrollTo(0,0); }
+function clear(){ stage.textContent=''; }
+function hhmmss(epoch){ var s=14*3600+(epoch-NOW); s=((s%86400)+86400)%86400;
+  var p=function(x){ return (x<10?'0':'')+x; }; return p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60); }
+function tokenView(token){
+  var p=token.split('.'), d=el('div',{class:'token'});
+  d.appendChild(el('span',{class:'t-h',text:p[0]})); d.appendChild(document.createTextNode('.'));
+  d.appendChild(el('span',{class:'t-b',text:p[1]||''})); d.appendChild(document.createTextNode('.'));
+  d.appendChild(el('span',{class:'t-s',text:p[2]||''}));
+  return d;
+}
+function nextButton(label,fn){ return el('button',{class:'primary',text:label,onclick:fn}); }
+/* 고르는 문제 하나. 맞힐 때까지 다시 고른다. 첫 시도에 맞히면 점수가 크다 */
+function quiz(parent,question,options,done){
+  var box=el('div',{class:'card'},[el('p',{html:'<b>'+question+'</b>'})]), tries=0, out=el('div');
+  options.forEach(function(o){
+    var b=el('button',{class:'pick',text:o.text,onclick:function(){
+      tries++; out.textContent='';
+      if(o.right){ b.className='pick right'; Array.prototype.forEach.call(box.querySelectorAll('button.pick'),function(x){ x.disabled=true; });
+        var gain=tries===1?100:40; addScore(gain);
+        out.appendChild(el('div',{class:'good',html:'<b>맞다. +'+gain+'</b><br>'+o.why})); done(out); }
+      else{ b.className='pick wrong'; b.disabled=true; out.appendChild(el('div',{class:'bad',html:'<b>아니다.</b> '+o.why})); }
+    }});
+    box.appendChild(b);
+  });
+  box.appendChild(out); parent.appendChild(box); return box;
+}
+
+/* ---------- 시작 ---------- */
+function intro(){
+  clear(); setAct(-1);
+  stage.appendChild(el('div',{class:'card'},[
+    el('h2',{text:'토큰 하나를 세 자리에서 본다'}),
+    el('p',{html:'이 서비스는 로그인한 회원에게 <b>액세스 토큰</b>(JWT)을 준다. 회원은 그 토큰을 내고 자기의 정보를 받는다. 이 게임에서 너는 역할을 세 번 바꾼다.'}),
+    el('table',{html:'<tr><th>막</th><th>너의 역할</th><th>배우는 것</th></tr>'
+      +'<tr><td>1막 · 발급소</td><td>🏛️ 서버</td><td>토큰에 무엇을 넣고, 어떻게 서명하는가</td></tr>'
+      +'<tr><td>2막 · 해커</td><td>🕵️ 공격하는 사람</td><td>토큰을 왜 속이지 못하는가</td></tr>'
+      +'<tr><td>3막 · 문지기</td><td>💂 필터</td><td>요청마다 무엇을 확인하는가</td></tr>'}),
+    el('p',{class:'small',text:'5 ~ 10분이 걸린다. 서명은 흉내가 아니다. 이 화면이 실제 HMAC-SHA256을 계산한다.'}),
+    nextButton('시작한다 →',act1)
+  ]));
+}
+
+/* ---------- 1막: 발급소 ---------- */
+var jakeToken=null;
+function act1(){
+  clear(); setAct(0);
+  var c=el('div',{class:'card'},[el('span',{class:'role',text:'🏛️ 너는 서버다'}), el('h2',{text:'1막 · 발급소'}),
+    el('div',{class:'say',html:'🧑 <b>jake</b>가 창구에 왔다. "가입하고 싶어요. 비밀번호는 <code>correct-horse-battery</code>예요."'})]);
+  stage.appendChild(c);
+  quiz(stage,'먼저 가입이다. DB에 무엇을 저장하는가?',[
+    {text:'비밀번호를 그대로 저장한다. 로그인할 때 글자를 비교한다.',why:'DB가 새면 모든 회원의 비밀번호가 그대로 나간다. 이 서비스의 회원(<code>Member</code>)에는 글자를 담는 필드가 아예 없다.'},
+    {text:'비밀번호를 암호화해서 저장한다. 필요하면 키로 다시 푼다.',why:'풀 수 있으면 키를 가진 사람도 풀 수 있다. 서버는 비밀번호를 다시 알 필요가 없다. 맞는지만 알면 된다.'},
+    {text:'비밀번호의 해시를 저장한다. 해시에서 비밀번호를 다시 얻지 못한다.',right:true,
+     why:'이 서비스는 BCrypt로 해시한다 (<code>BCryptPasswordHasher</code>). 저장되는 것은 <code>$2a$10$…</code> 같은 60자다. 같은 비밀번호도 해시는 매번 다르다. 로그인할 때는 해시끼리 비교하지 않고, 낸 비밀번호로 다시 계산해서 맞는지 본다.'}
+  ],function(out){ out.appendChild(nextButton('다음: 로그인 →',act1b)); });
+}
+var CHIPS=[
+  {id:'sub',label:'회원의 식별자 (sub)',value:'1',need:true},
+  {id:'exp',label:'만료 시각 (exp)',value:NOW+VALIDITY,need:true},
+  {id:'username',label:'사용자 이름',value:'jake',why:'넣어도 새는 비밀은 아니다. 그러나 이름이 바뀌면 옛 토큰에는 옛 이름이 남는다. 서버는 식별자로 DB에서 읽는다.'},
+  {id:'email',label:'이메일',value:'jake@example.com',why:'토큰은 누구나 읽는다. 주운 사람이 이메일을 알게 된다.'},
+  {id:'password',label:'비밀번호',value:'correct-horse-battery',why:'토큰은 누구나 읽는다. 비밀번호를 적은 종이를 들고 다니는 것과 같다.'},
+  {id:'hash',label:'비밀번호 해시',value:'$2a$10$N9qo8uLOickgx2ZMRZoMye',why:'해시도 밖으로 나가면 안 된다. 받은 사람이 천천히 비밀번호를 추측해 볼 수 있다.'},
+  {id:'role',label:'역할 (admin 여부)',value:'member',why:'이 서비스에는 역할이 없다. 그리고 토큰은 만료될 때까지 취소하지 못한다. 권한을 넣으면 권한을 뺏어도 토큰에는 남는다.'}
+];
+function act1b(){
+  clear();
+  var picked={}, preview=el('div'), out=el('div'), tries=0;
+  var c=el('div',{class:'card'},[el('span',{class:'role',text:'🏛️ 너는 서버다'}), el('h2',{text:'토큰에 무엇을 넣을까'}),
+    el('div',{class:'say',html:'🧑 jake가 로그인했다. 이메일과 비밀번호가 맞다. 이제 <b>증거</b>를 만들어 준다. jake는 다음부터 비밀번호를 내지 않고 이 증거를 낸다.'}),
+    el('p',{html:'넣을 것을 고른다. 고르면 아래에 토큰의 본문이 보인다.'})]);
+  var row=el('div',{class:'row'});
+  function render(){
+    var payload={}; ['exp','sub','username','email','password','hash','role'].forEach(function(k){ if(picked[k]) payload[k]=CHIPS.filter(function(x){return x.id===k;})[0].value; });
+    var b=b64url(utf8(JSON.stringify(payload)));
+    preview.textContent='';
+    preview.appendChild(el('dl',{class:'kv',html:'<dt>본문 (JSON)</dt><dd>'+JSON.stringify(payload).replace(/</g,'&lt;')+'</dd><dt>base64url</dt><dd style="color:var(--c-body)">'+b+'</dd><dt>주운 사람이 푼다</dt><dd>'+(b64urlToText(b)||'').replace(/</g,'&lt;')+'</dd>'}));
+  }
+  CHIPS.forEach(function(ch){
+    var b=el('button',{class:'chip',text:ch.label,onclick:function(){ picked[ch.id]=!picked[ch.id]; b.className='chip'+(picked[ch.id]?' sel':''); render(); }});
+    row.appendChild(b);
+  });
+  c.appendChild(row); c.appendChild(preview);
+  c.appendChild(el('button',{class:'primary',text:'이것으로 만든다',onclick:function(){
+    tries++; out.textContent='';
+    var extra=CHIPS.filter(function(x){ return picked[x.id] && !x.need; }), missing=CHIPS.filter(function(x){ return x.need && !picked[x.id]; });
+    if(!extra.length && !missing.length){
+      var gain=tries===1?150:60; addScore(gain);
+      out.appendChild(el('div',{class:'good',html:'<b>맞다. +'+gain+'</b><br>이 서비스의 토큰에는 둘만 있다: 누구인가(<code>sub</code>)와 언제까지인가(<code>exp</code>). 유효 시간은 1시간이다. 나머지는 필요할 때 서버가 DB에서 읽는다.'}));
+      out.appendChild(el('div',{class:'learn',html:'💡 base64url은 암호가 아니다. 글자를 다른 글자로 적는 방법일 뿐이다. 누구나 되돌린다.'}));
+      out.appendChild(nextButton('다음: 서명 →',act1c));
+    } else {
+      var msg='';
+      if(missing.length) msg+='<b>빠진 것이 있다:</b> '+missing.map(function(x){return x.label;}).join(', ')+'. 서버는 "누구인가"와 "언제까지인가"를 알아야 한다.<br>';
+      extra.forEach(function(x){ msg+='<b>'+x.label+'</b>: '+x.why+'<br>'; });
+      out.appendChild(el('div',{class:'bad',html:msg}));
+    }
+  }}));
+  c.appendChild(out); stage.appendChild(c); render();
+}
+function act1c(){
+  clear();
+  var header={alg:'HS256'}, payload={exp:NOW+VALIDITY,sub:'1'};
+  var unsigned=makeToken(null,header,payload), out=el('div');
+  var c=el('div',{class:'card'},[el('span',{class:'role',text:'🏛️ 너는 서버다'}), el('h2',{text:'서명한다'}),
+    el('p',{html:'본문은 누구나 읽는다. 그러면 누구나 <b>고쳐 쓸</b> 수도 있다. <code>"sub":"1"</code>을 <code>"sub":"2"</code>로 바꾸면 finn이 된다. 이것을 막는 것이 서명이다.'}),
+    el('dl',{class:'kv',html:'<dt>머리</dt><dd style="color:var(--c-head)">'+JSON.stringify(header)+'</dd><dt>본문</dt><dd style="color:var(--c-body)">'+JSON.stringify(payload)+' <span class="small">(만료: '+hhmmss(payload.exp)+', 지금: '+hhmmss(NOW)+')</span></dd><dt>🔑 서버의 키</dt><dd>'+SECRET+' <span class="small">(서버만 안다)</span></dd>'}),
+    el('p',{class:'small',text:'서명하기 전의 토큰:'}), tokenView(unsigned)]);
+  var btn=el('button',{class:'primary',text:'🔏 키로 서명한다 (HMAC-SHA256)',onclick:function(){
+    btn.disabled=true; jakeToken=makeToken(SECRET,header,payload); addScore(50);
+    out.appendChild(el('p',{class:'small',text:'서명한 토큰. 이것이 jake에게 간다:'})); out.appendChild(tokenView(jakeToken));
+    out.appendChild(el('p',{html:'<span class="t-h">머리</span> . <span class="t-b">본문</span> . <span class="t-s">서명</span> — 서명은 "머리.본문"과 키를 섞어서 계산한 값이다. 머리나 본문의 글자 하나가 바뀌면 서명이 완전히 달라진다. 키가 없으면 맞는 서명을 만들지 못한다.'}));
+    quiz(out,'jake가 이 토큰을 길에 떨어뜨렸다. 주운 사람은 무엇을 할 수 있는가?',[
+      {text:'아무것도 못 한다. 토큰은 암호화돼 있어서 읽지 못한다.',why:'읽는다. 본문은 base64url일 뿐이다. 이 토큰은 <b>암호화하지 않았다</b>. 서명했다.'},
+      {text:'본문을 읽는다. 본문을 고쳐서 finn인 척한다.',why:'읽는 것은 맞다. 고치면 서명이 맞지 않는다. 2막에서 직접 해 본다.'},
+      {text:'본문을 읽는다. 그리고 만료될 때까지 jake인 척한다. 본문을 고치지는 못한다.',right:true,
+       why:'서명은 <b>바꾸는 것</b>을 막는다. <b>읽는 것</b>과 <b>그대로 쓰는 것</b>은 막지 못한다. 그래서 토큰에 비밀을 넣지 않고, 유효 시간을 짧게 하고(1시간), HTTPS로만 보낸다.'}
+    ],function(o){ o.appendChild(el('div',{class:'learn',html:'💡 1막의 정리: 비밀번호는 <b>해시</b>한다 (되돌리지 못한다). 토큰은 <b>서명</b>한다 (읽지만 바꾸지 못한다). 이 서비스에서 <b>암호화</b>하는 것은 없다.'}));
+      o.appendChild(nextButton('2막: 해커가 된다 →',act2)); });
+  }});
+  c.appendChild(btn); c.appendChild(out); stage.appendChild(c);
+}
+
+/* ---------- 2막: 해커 ---------- */
+function act2(){
+  clear(); setAct(1);
+  var got={}, BADGES=[['read','① 본문을 읽는다'],['tamper','② sub를 바꾼다'],['none','③ 서명을 없앤다'],['guess','④ 키를 추측한다'],['param','⑤ 주소로 가리킨다']];
+  var orig=jakeToken.split('.'), origPayload=JSON.parse(b64urlToText(orig[1]));
+  var c=el('div',{class:'card'},[el('span',{class:'role',text:'🕵️ 너는 해커다'}), el('h2',{text:'2막 · finn의 정보를 훔쳐라'}),
+    el('div',{class:'say',html:'너는 jake의 토큰을 주웠다. jake의 정보는 이미 볼 수 있다. 목표는 <b>finn</b>(식별자 2)의 이메일이다. 서버의 키는 모른다. 공격 5가지를 모두 해 본다.'}),
+    el('p',{class:'small',text:'주운 토큰:'}), tokenView(jakeToken)]);
+  var badges=el('div',{class:'badges'}), out=el('div'), bonus=el('div');
+  function renderBadges(){ badges.textContent=''; BADGES.forEach(function(b){ badges.appendChild(el('span',{class:'badge'+(got[b[0]]?' got':''),text:(got[b[0]]?'✓ ':'')+b[1]})); }); }
+  function earn(id){ if(!got[id]){ got[id]=true; addScore(60); renderBadges(); if(Object.keys(got).length===BADGES.length) finish(); } }
+  c.appendChild(badges);
+  c.appendChild(el('button',{text:'🔍 토큰을 풀어 본다',onclick:function(){
+    out.textContent=''; out.appendChild(el('div',{class:'toolout',text:'머리: '+b64urlToText(orig[0])+'\n본문: '+b64urlToText(orig[1])+'\n서명: (키가 없으면 다시 만들지 못한다)'}));
+    out.appendChild(el('div',{class:'good',html:'<b>읽었다.</b> 키가 필요 없었다. jake의 식별자가 1이라는 것과 만료 시각을 안다. 비밀은 없다. 서버가 넣지 않았기 때문이다.'})); earn('read'); }}));
+  c.appendChild(el('h3',{text:'토큰을 고쳐서 보낸다'}));
+  var fSub=el('input',{type:'text',value:'1'}), fAlg=el('select',{html:'<option>HS256</option><option>none</option>'});
+  var fSig=el('select',{html:'<option value="keep">주운 토큰의 서명을 그대로 붙인다</option><option value="drop">서명을 지운다</option><option value="guess">내가 추측한 키로 다시 서명한다</option>'});
+  var fKey=el('input',{type:'text',value:'secret',placeholder:'추측한 키'});
+  var fPath=el('select',{html:'<option>/api/members/me</option><option>/api/members/me?id=2</option><option>/api/members/2</option>'});
+  c.appendChild(el('label',{class:'f'},['sub',fSub])); c.appendChild(el('label',{class:'f'},['alg',fAlg]));
+  c.appendChild(el('label',{class:'f'},['서명',fSig])); var keyRow=el('label',{class:'f'},['추측한 키',fKey]); c.appendChild(keyRow);
+  c.appendChild(el('label',{class:'f'},['주소',fPath]));
+  fSig.addEventListener('change',function(){ keyRow.style.display=fSig.value==='guess'?'':'none'; }); keyRow.style.display='none';
+  c.appendChild(el('button',{class:'primary',text:'📨 서버에 보낸다',onclick:function(){
+    var header={alg:fAlg.value}, payload={exp:origPayload.exp,sub:fSub.value};
+    var input=b64url(utf8(JSON.stringify(header)))+'.'+b64url(utf8(JSON.stringify(payload)));
+    var sig=fSig.value==='keep'?orig[2]:fSig.value==='drop'?'':signature(fKey.value,input), token=input+'.'+sig;
+    var r=server({method:'GET',path:fPath.value,token:token});
+    out.textContent=''; out.appendChild(el('p',{class:'small',text:'보낸 토큰:'})); out.appendChild(tokenView(token));
+    out.appendChild(el('div',{class:'toolout',text:'GET '+fPath.value+'\nAuthorization: Bearer (위의 토큰)\n\n→ HTTP '+r.status+'\n'+JSON.stringify(r.body)}));
+    var why;
+    if(r.stage==='alg'){ why='<b>거부됐다.</b> 서버는 HS256으로 서명한 토큰만 받는다. "서명이 없다"고 적은 토큰(<code>"alg":"none"</code>)은 옛날에 실제로 통하던 공격이다. 이 서비스의 디코더는 받지 않는다.'; earn('none'); }
+    else if(r.stage==='signature'){
+      var expected=signature(SECRET,input);
+      why='<b>거부됐다. 서명이 맞지 않는다.</b><br>서버가 자기의 키로 "머리.본문"을 다시 계산했다:<br><code>'+expected+'</code><br>네가 붙인 서명:<br><code>'+(sig||'(없다)')+'</code>';
+      if(fSig.value==='guess'){ why+='<br>추측한 키 <code>'+fKey.value.replace(/</g,'&lt;')+'</code>는 서버의 키가 아니다.'; earn('guess'); }
+      else if(fSig.value==='drop'){ why+='<br>서명을 지워도 서버는 서명을 요구한다.'; earn('none'); }
+      else { why+='<br>본문을 바꿨는데 서명은 옛 본문의 것이다.'; if(fSub.value!=='1') earn('tamper'); }
+    }
+    else if(r.status===200){
+      if(fPath.value.indexOf('?id=2')>=0){ why='<b>통과했다. 그런데 jake의 정보다.</b> 서버는 주소의 <code>id=2</code>를 읽지 않는다. 컨트롤러(<code>MemberController.me</code>)에는 그것을 받는 자리가 없다. 조회의 대상은 토큰의 <code>sub</code>에서만 나온다.'; earn('param'); }
+      else why='<b>통과했다.</b> 고친 것이 없으면 그대로 jake다. finn이 되려면 무엇을 바꿔야 할까.';
+    }
+    else if(r.status===404){ why='<b>그런 주소가 없다.</b> 이 서비스에는 <code>/api/members/{id}</code>가 없다. <code>/me</code>뿐이다. 다른 회원의 주소가 없다.'; earn('param'); }
+    else why='<b>거부됐다.</b>';
+    out.appendChild(el('div',{class:r.status===200?'good':'bad',html:why}));
+  }}));
+  c.appendChild(out); c.appendChild(bonus); stage.appendChild(c); renderBadges();
+  function finish(){
+    bonus.appendChild(el('div',{class:'learn',html:'💡 다섯 가지가 모두 막혔다. 남은 길은 하나다: <b>서버의 키를 아는 것.</b>'}));
+    var b=el('div',{class:'card'},[el('h3',{text:'보너스: 옆 건물의 서버'}),
+      el('p',{html:'다른 회사의 서버가 있다. 그 서버의 개발자는 키를 흔한 낱말로 정했다. finn은 거기에도 식별자 2로 가입했다. 키를 맞혀 본다.'})]);
+    var WEAK='password', row=el('div',{class:'row'}), res=el('div'), tries=0, won=false;
+    ['secret','123456','jwt','password','admin'].forEach(function(g){
+      row.appendChild(el('button',{class:'chip',text:g,onclick:function(){
+        if(won) return; tries++;
+        var t=makeToken(g,{alg:'HS256'},{exp:NOW+VALIDITY,sub:'2'}), r=server({method:'GET',path:'/api/members/me',token:t},WEAK);
+        res.textContent='';
+        if(r.status===200){ won=true; addScore(tries<=2?150:80);
+          res.appendChild(el('div',{class:'toolout',text:'→ HTTP 200\n'+JSON.stringify(r.body)}));
+          res.appendChild(el('div',{class:'bad',html:'<b>뚫렸다.</b> 키를 알면 누구의 토큰이든 만든다. 서명은 키만큼만 강하다.'}));
+          res.appendChild(el('div',{class:'good',html:'<b>이 서비스는?</b> 키가 32바이트보다 짧으면 서버가 시작하지 않는다 (<code>JwtSigningKey</code>). <code>password</code>는 8바이트다. 그리고 키는 저장소에 넣지 않는다. 설정(<code>trealworld.jwt.secret</code>)에서 읽는다.'}));
+          res.appendChild(nextButton('3막: 문지기가 된다 →',act3));
+        } else res.appendChild(el('div',{class:'bad',html:'<code>'+g+'</code>: 401. 이 낱말이 아니다. ('+tries+'번째)'}));
+      }}));
+    });
+    b.appendChild(row); b.appendChild(res); bonus.appendChild(b); b.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+/* ---------- 3막: 문지기 ---------- */
+function T(secret,sub,expOffset,alg){ return makeToken(alg==='none'?null:secret,{alg:alg||'HS256'},{exp:NOW+expOffset,sub:sub}); }
+function ROUNDS(){
+  var valid=T(SECRET,'1',2400), parts=valid.split('.');
+  var tampered=parts[0]+'.'+b64url(utf8(JSON.stringify({exp:NOW+2400,sub:'2'})))+'.'+parts[2];
+  return [
+    {who:'🧑',name:'jake',method:'GET',path:'/api/members/me',token:valid,
+     why:'서명이 맞고, 만료 전이고, 회원이 있다. 통과다. 컨트롤러는 "누가"(<code>"1"</code>)만 받는다.'},
+    {who:'🚶',name:'지나가던 사람',method:'GET',path:'/api/members/me',token:null,
+     why:'토큰이 없다. 이 주소에는 인증이 필요하다. 401이고 <code>WWW-Authenticate: Bearer</code> 헤더를 붙인다.'},
+    {who:'🙋',name:'가입한 지 1분 된 사람',method:'POST',path:'/api/auth/login',token:null,
+     why:'로그인은 토큰을 받으러 오는 곳이다. 토큰을 요구하면 아무도 들어오지 못한다. 가입과 로그인만 인증 없이 통과시킨다. 비밀번호가 맞는지는 문지기의 일이 아니다. 안쪽(<code>LoginService</code>)의 일이다.'},
+    {who:'🧑‍🦰',name:'finn',method:'GET',path:'/api/members/me',token:T(SECRET,'2',-10),
+     why:'서명은 맞다. 그러나 10초 전에 만료됐다. 이 서비스에는 여유 시간이 없다. "거의 맞다"는 없다. finn은 다시 로그인하면 된다.'},
+    {who:'🧑',name:'jake',method:'GET',path:'/api/members/me',token:T(SECRET,'1',5),
+     why:'만료까지 5초 남았다. 아직 유효하다. 만료 시각의 <b>뒤</b>가 만료다.'},
+    {who:'🕵️',name:'어디서 본 얼굴',method:'GET',path:'/api/members/me',token:tampered,
+     why:'본문은 <code>"sub":"2"</code>인데 서명은 <code>"sub":"1"</code>일 때의 것이다. 2막에서 네가 한 공격이다. 서명을 다시 계산하면 맞지 않는다.'},
+    {who:'🧑',name:'jake',method:'GET',path:'/api/members/me;x=1',token:valid,
+     why:'토큰은 완벽하다. 틀린 것은 주소다 (<code>;</code>). 방화벽이 토큰을 보기도 전에 거부한다. 답은 400이다. <b>실화:</b> 이 서비스는 얼마 전까지 여기에 401("토큰이 틀리다")로 답했다. 서버가 오류를 <code>/error</code>로 넘기는 길에도 인증을 요구했기 때문이다. 고쳤다.'},
+    {who:'👻',name:'bmo (탈퇴했다)',method:'GET',path:'/api/members/me',token:T(SECRET,'3',1800),
+     why:'서명이 맞고 만료 전이다. 서버가 발급한 진짜 토큰이다. 그러나 식별자 3인 회원이 명부에 없다. 토큰이 유효해도 주인이 없으면 거부한다. 그래서 문지기는 요청마다 명부를 본다 (<code>MemberAuthenticationConverter</code>).'},
+    {who:'🧑',name:'jake',method:'GET',path:'/api/members/me?id=2',token:valid,
+     why:'토큰은 jake의 것이고 유효하다. 통과다. <code>?id=2</code>는 아무도 읽지 않는다. 돌아가는 것은 jake의 정보다.', ask:true},
+    {who:'🤖',name:'오래 켜 둔 앱',method:'POST',path:'/api/auth/login',token:T(SECRET,'1',-7200),
+     why:'<b>함정.</b> 로그인은 토큰이 없어도 되는 곳이다. 그러나 토큰을 <b>붙였으면</b> 문지기는 그것을 검사한다. 토큰의 검사는 주소를 보지 않는다. 만료된 토큰이라서 401이다. 앱은 토큰을 떼고 로그인해야 한다.'},
+    {who:'🎭',name:'자신만만한 사람',method:'GET',path:'/api/members/me',token:T('password','2',3000),
+     why:'모양은 완벽하다. HS256이고, 만료 전이고, 식별자 2는 명부에 있다. 그러나 <code>password</code>라는 키로 서명했다. 서버의 키로 다시 계산하면 맞지 않는다. 눈으로는 구분하지 못한다. 계산해야 한다.'}
+  ].map(function(r){ r.result=server(r); r.answer=r.result.status===200||r.result.status==='pass'?'pass':String(r.result.status); return r; });
+}
+function act3(){
+  clear(); setAct(2); $('streakPill').hidden=false;
+  stage.appendChild(el('div',{class:'card'},[el('span',{class:'role',text:'💂 너는 문지기다'}), el('h2',{text:'3막 · 요청이 줄을 섰다'}),
+    el('p',{html:'요청이 하나씩 온다. 판정은 셋 중 하나다.'}),
+    el('table',{html:'<tr><th>판정</th><th>언제</th></tr><tr><td><b>통과</b></td><td>안쪽(컨트롤러)으로 보낸다</td></tr><tr><td><b>401</b></td><td>누구인지 믿지 못한다</td></tr><tr><td><b>400</b></td><td>요청 자체가 틀렸다</td></tr>'}),
+    el('p',{html:'도구가 셋 있다: <b>서명 검사</b>, <b>시계</b>, <b>명부</b>. 눈으로 보지 말고 도구를 쓴다. 판마다 40초다. 빠르면 점수가 더 크다. 연속으로 맞히면 점수가 곱해진다.'}),
+    nextButton('문을 연다 →',function(){ runRounds(ROUNDS(),0,0); })]));
+}
+function runRounds(rounds,i,correct){
+  if(i>=rounds.length) return ending(correct,rounds.length);
+  clear();
+  var r=rounds[i], LIMIT=40, left=LIMIT, done=false, timer;
+  var c=el('div',{class:'card'}), bar=el('i'), tools=el('div'), out=el('div');
+  c.appendChild(el('p',{class:'small',text:(i+1)+' / '+rounds.length}));
+  c.appendChild(el('div',{class:'timer'},[bar]));
+  c.appendChild(el('div',{class:'req'},[el('div',{class:'who',text:r.who}), el('div',{},[el('b',{text:r.name}), el('div',{class:'mono',text:r.method+' '+r.path}),
+    el('div',{class:'small',text:r.token==null?'Authorization 헤더가 없다':'Authorization: Bearer ↓'})])]));
+  if(r.token!=null){ c.appendChild(tokenView(r.token));
+    c.appendChild(el('dl',{class:'kv',html:'<dt>머리</dt><dd>'+b64urlToText(r.token.split('.')[0])+'</dd><dt>본문</dt><dd>'+b64urlToText(r.token.split('.')[1])+'</dd>'})); }
+  var toolRow=el('div',{class:'tools'});
+  function tool(label,fn){ toolRow.appendChild(el('button',{text:label,onclick:function(){ tools.textContent=''; tools.appendChild(el('div',{class:'toolout',text:fn()})); }})); }
+  tool('🔏 서명 검사',function(){
+    if(r.token==null) return '검사할 토큰이 없다.';
+    var p=r.token.split('.'), h=JSON.parse(b64urlToText(p[0]));
+    if(h.alg!=='HS256') return 'alg가 '+h.alg+'이다. 이 서버는 HS256만 받는다. ✗';
+    var e=signature(SECRET,p[0]+'.'+p[1]);
+    return '서버의 키로 다시 계산한 서명:\n'+e+'\n토큰에 붙은 서명:\n'+p[2]+'\n→ '+(e===p[2]?'같다 ✓':'다르다 ✗');
+  });
+  tool('🕐 시계',function(){
+    var s='지금: '+hhmmss(NOW); if(r.token==null) return s;
+    var exp=JSON.parse(b64urlToText(r.token.split('.')[1])).exp, d=exp-NOW;
+    return s+'\n토큰의 exp: '+hhmmss(exp)+'\n→ '+(d>=0?'만료까지 '+d+'초 남았다 ✓':(-d)+'초 전에 만료됐다 ✗');
+  });
+  tool('📒 명부',function(){ return Object.keys(MEMBERS).map(function(k){ return '식별자 '+k+': '+MEMBERS[k].username+' <'+MEMBERS[k].email+'>'; }).join('\n')+'\n(이 둘뿐이다)'; });
+  c.appendChild(toolRow); c.appendChild(tools);
+  var verdicts=el('div',{class:'verdicts'});
+  [['pass','✅ 통과'],['401','⛔ 401'],['400','🚧 400']].forEach(function(v){ verdicts.appendChild(el('button',{text:v[1],'data-v':v[0],onclick:function(){ judge(v[0]); }})); });
+  c.appendChild(verdicts); c.appendChild(out); stage.appendChild(c);
+  function tick(){ left-=0.25; bar.style.width=Math.max(0,left/LIMIT*100)+'%'; bar.className=left<10?'low':''; if(left<=0) judge(null); }
+  timer=setInterval(tick,250);
+  function judge(v){
+    if(done) return; done=true; clearInterval(timer);
+    Array.prototype.forEach.call(verdicts.children,function(b){ b.disabled=true; if(b.getAttribute('data-v')===r.answer) b.className='right'; else if(b.getAttribute('data-v')===v) b.className='wrong'; });
+    var ok=v===r.answer, label={pass:'통과','401':'401','400':'400'}[r.answer];
+    if(ok){ state.streak++; var gain=Math.round((100+Math.max(0,left)*2)*(1+Math.min(state.streak-1,4)*0.25)); addScore(gain);
+      out.appendChild(el('div',{class:'good',html:'<b>맞다. +'+gain+'</b>'+(state.streak>1?' (연속 '+state.streak+')':'')+'<br>'+r.why})); }
+    else { state.streak=0; out.appendChild(el('div',{class:'bad',html:'<b>'+(v==null?'시간이 다 됐다.':'아니다.')+' 답은 '+label+'이다.</b><br>'+r.why})); }
+    $('streak').textContent=state.streak;
+    var go=function(){ runRounds(rounds,i+1,correct+(ok?1:0)); };
+    if(r.ask && r.answer==='pass'){
+      quiz(out,'통과시켰다. 안쪽에서 누구의 정보를 돌려주는가?',[
+        {text:'finn. 주소에 id=2가 있다.',why:'주소의 값은 아무도 읽지 않는다.'},
+        {text:'jake. 대상은 토큰의 sub에서만 나온다.',right:true,why:'다른 회원을 가리킬 자리가 없다. "막는다"가 아니고 "자리가 없다"다. 이것이 이 서비스가 "자기의 정보만 조회한다"를 지키는 방법이다.'},
+        {text:'둘 다. 목록으로 돌려준다.',why:'응답은 항상 회원 하나다.'}
+      ],function(o){ o.appendChild(nextButton('다음 요청 →',go)); });
+    } else out.appendChild(nextButton(i+1<rounds.length?'다음 요청 →':'결과를 본다 →',go));
+  }
+}
+
+/* ---------- 끝 ---------- */
+function ending(correct,total){
+  clear(); Array.prototype.forEach.call($('acts').children,function(s){ s.className='done'; });
+  var rank=correct===total?'🏆 필터 체인 그 자체':correct>=total-2?'🥇 믿음직한 문지기':correct>=total-5?'🥈 수습 문지기':'🥉 문 앞에서 졸았다';
+  stage.appendChild(el('div',{class:'card center'},[el('p',{class:'kicker',text:'근무 끝'}), el('div',{class:'big',text:state.score+'점'}),
+    el('h2',{text:rank}), el('p',{text:'문지기의 판정: '+total+'개 중 '+correct+'개를 맞혔다.'}), nextButton('처음부터 다시 한다',function(){ state.score=0; state.streak=0; $('score').textContent=0; $('streak').textContent=0; $('streakPill').hidden=true; intro(); })]));
+  stage.appendChild(el('div',{class:'card'},[el('h2',{text:'오늘 배운 것'}),
+    el('table',{html:'<tr><th>흔한 생각</th><th>실제</th></tr>'
+      +'<tr><td>JWT는 암호화돼 있다</td><td><b>서명</b>돼 있다. 누구나 읽는다. 아무도 바꾸지 못한다</td></tr>'
+      +'<tr><td>비밀번호를 암호화해서 저장한다</td><td><b>해시</b>한다. 서버도 원래의 비밀번호를 다시 얻지 못한다</td></tr>'
+      +'<tr><td>토큰이 진짜면 통과다</td><td>진짜여도 만료됐거나 주인이 없으면 거부한다</td></tr>'
+      +'<tr><td>로그인의 주소는 항상 열려 있다</td><td>토큰을 붙였으면 그 토큰을 검사한다</td></tr>'
+      +'<tr><td>서버가 다른 회원의 조회를 막는다</td><td>다른 회원을 가리킬 자리가 없다</td></tr>'})]));
+  stage.appendChild(el('div',{class:'card'},[el('h2',{text:'게임과 실제 코드'}),
+    el('table',{html:'<tr><th>게임에서</th><th>이 서비스에서</th></tr>'
+      +'<tr><td>가입: 해시를 저장한다</td><td><code>BCryptPasswordHasher</code>, <code>Member</code>의 <code>PasswordHash</code></td></tr>'
+      +'<tr><td>토큰에 sub와 exp만 넣고 서명한다</td><td><code>JwtAccessTokenIssuer</code> (HS256, 유효 시간 1시간)</td></tr>'
+      +'<tr><td>서버의 키. 짧으면 시작하지 않는다</td><td><code>JwtSigningKey</code>, 설정 <code>trealworld.jwt.secret</code></td></tr>'
+      +'<tr><td>토큰을 보낸다</td><td><code>Authorization: Bearer &lt;토큰&gt;</code> 헤더. 쿼리로는 받지 않는다</td></tr>'
+      +'<tr><td>🔏 서명 검사, 🕐 시계</td><td><code>SecurityConfig.accessTokenDecoder</code> (여유 시간 0, 주입한 <code>Clock</code>)</td></tr>'
+      +'<tr><td>📒 명부</td><td><code>MemberAuthenticationConverter</code> → <code>GetMemberUseCase</code></td></tr>'
+      +'<tr><td>통과시킬 주소를 고른다</td><td><code>SecurityConfig.securityFilterChain</code> (가입과 로그인만 연다)</td></tr>'
+      +'<tr><td>⛔ 401의 응답</td><td><code>ProblemDetailsAuthenticationEntryPoint</code> (이유를 구분하지 않는다)</td></tr>'
+      +'<tr><td>🚧 400의 응답</td><td>Spring Security의 방화벽 → <code>ProblemDetailsErrorController</code></td></tr>'
+      +'<tr><td>"누가"만 받는 안쪽</td><td><code>MemberController.me(Principal)</code></td></tr>'}),
+    el('p',{class:'small',html:'게임이 줄인 것: BCrypt는 계산하지 않는다 (설명만 한다). 로그인의 안쪽(이메일과 비밀번호의 확인)은 나오지 않는다. 방화벽의 규칙은 <code>;</code>, <code>//</code>, <code>%2e</code>만 있다. 토큰의 서명과 판정의 순서는 실제와 같다.'})]));
+}
+if(typeof document!=='undefined' && $('stage')) intro();
+</script>
+</body>
+</html>
