@@ -2,9 +2,15 @@ package trealworld.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 import javax.sql.DataSource;
@@ -129,6 +135,30 @@ class RegisterMemberAcceptanceTests {
 				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
 				.expectBody()
 				.jsonPath("$.errors.email").exists();
+	}
+
+	/** 같은 값의 가입이 동시에 와도 회원은 하나다. 나머지는 모두 409다. 500은 없다. */
+	@Test
+	void ac1_5_ac1_6_registrations_at_the_same_time_create_one_member() throws Exception {
+		int requests = 12;
+		CountDownLatch start = new CountDownLatch(1);
+		List<Future<Integer>> results = new ArrayList<>();
+		try (ExecutorService executor = Executors.newFixedThreadPool(requests)) {
+			for (int i = 0; i < requests; i++) {
+				results.add(executor.submit(() -> {
+					start.await();
+					return register(username, email, PASSWORD).returnResult().getStatus().value();
+				}));
+			}
+			start.countDown();
+		}
+
+		List<Integer> statuses = new ArrayList<>();
+		for (Future<Integer> result : results) {
+			statuses.add(result.get());
+		}
+		assertThat(statuses).filteredOn(status -> status == 201).hasSize(1);
+		assertThat(statuses).filteredOn(status -> status == 409).hasSize(requests - 1);
 	}
 
 	@Test

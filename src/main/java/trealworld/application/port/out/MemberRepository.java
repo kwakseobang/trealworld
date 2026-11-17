@@ -9,6 +9,10 @@ import trealworld.domain.Username;
  */
 public interface MemberRepository {
 
+	/**
+	 * @throws MemberNotUniqueException 이메일이나 사용자 이름이 이미 있다.
+	 * existsByEmail과 existsByUsername이 "없다"고 답한 뒤에도 일어난다. 그 사이에 다른 가입이 저장했을 때다
+	 */
 	Member save(Member member);
 
 	boolean existsByEmail(Email email);

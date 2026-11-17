@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import trealworld.application.port.in.DuplicateMemberException;
 import trealworld.application.port.in.InvalidValuesException;
 import trealworld.application.port.in.RegisterMemberCommand;
+import trealworld.application.port.out.MemberNotUniqueException;
 import trealworld.application.port.out.MemberRepository;
 import trealworld.application.port.out.PasswordHasher;
 import trealworld.domain.Email;
@@ -115,12 +116,58 @@ class RegisterMemberServiceTests {
 				.isThrownBy(() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", "short")));
 	}
 
+	/** 확인과 저장의 사이에 다른 가입이 같은 이메일을 저장했다. */
+	@Test
+	void r6_an_email_saved_by_another_registration_before_the_save_is_rejected() {
+		members.savedByAnotherRegistration = Member.register(new Username("finn"), new Email("jake@example.com"),
+				new PasswordHash("hash"));
+
+		DuplicateMemberException exception = catchThrowableOfType(DuplicateMemberException.class,
+				() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD)));
+
+		assertThat(exception.getField()).isEqualTo("email");
+	}
+
+	/** 확인과 저장의 사이에 다른 가입이 같은 사용자 이름을 저장했다. */
+	@Test
+	void r7_a_username_saved_by_another_registration_before_the_save_is_rejected() {
+		members.savedByAnotherRegistration = Member.register(new Username("jake"), new Email("finn@example.com"),
+				new PasswordHash("hash"));
+
+		DuplicateMemberException exception = catchThrowableOfType(DuplicateMemberException.class,
+				() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD)));
+
+		assertThat(exception.getField()).isEqualTo("username");
+	}
+
+	/** 저장소가 거부했지만 이메일도 사용자 이름도 없다. 중복이 아니다. 숨기지 않고 그대로 던진다. */
+	@Test
+	void a_rejected_save_that_is_not_a_duplicate_is_not_reported_as_a_duplicate() {
+		members.rejectsNextSave = true;
+
+		assertThatExceptionOfType(MemberNotUniqueException.class)
+				.isThrownBy(() -> service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD)));
+	}
+
 	private static class FakeMemberRepository implements MemberRepository {
 
 		private final List<Member> saved = new ArrayList<>();
 
+		/** 다음의 save()의 직전에 다른 가입이 저장하는 회원. */
+		private Member savedByAnotherRegistration;
+
+		/** 다음의 save()를 이유 없이 거부한다. */
+		private boolean rejectsNextSave;
+
 		@Override
 		public Member save(Member member) {
+			if (savedByAnotherRegistration != null) {
+				saved.add(savedByAnotherRegistration);
+				savedByAnotherRegistration = null;
+			}
+			if (rejectsNextSave || existsByEmail(member.getEmail()) || existsByUsername(member.getUsername())) {
+				throw new MemberNotUniqueException(null);
+			}
 			saved.add(member);
 			return member;
 		}

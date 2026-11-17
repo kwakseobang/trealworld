@@ -1,7 +1,9 @@
 package trealworld.adapter.persistence;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
+import trealworld.application.port.out.MemberNotUniqueException;
 import trealworld.application.port.out.MemberRepository;
 import trealworld.domain.Email;
 import trealworld.domain.Member;
@@ -19,9 +21,17 @@ class MemberPersistenceAdapter implements MemberRepository {
 		this.jpaRepository = jpaRepository;
 	}
 
+	/**
+	 * DB의 제약이 저장을 거부하면 MemberNotUniqueException으로 바꾼다. 어느 제약인지는 읽지 않는다. DB마다 다르기 때문이다.
+	 */
 	@Override
 	public Member save(Member member) {
-		return jpaRepository.save(member);
+		try {
+			return jpaRepository.saveAndFlush(member);
+		}
+		catch (DataIntegrityViolationException exception) {
+			throw new MemberNotUniqueException(exception);
+		}
 	}
 
 	@Override

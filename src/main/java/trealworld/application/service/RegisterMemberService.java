@@ -8,6 +8,7 @@ import trealworld.application.port.in.DuplicateMemberException;
 import trealworld.application.port.in.InvalidValuesException;
 import trealworld.application.port.in.RegisterMemberCommand;
 import trealworld.application.port.in.RegisterMemberUseCase;
+import trealworld.application.port.out.MemberNotUniqueException;
 import trealworld.application.port.out.MemberRepository;
 import trealworld.application.port.out.PasswordHasher;
 import trealworld.domain.Email;
@@ -38,14 +39,29 @@ public class RegisterMemberService implements RegisterMemberUseCase {
 			throw new InvalidValuesException(errors);
 		}
 
+		rejectDuplicate(email, username);
+
+		Member member = Member.register(username, email, passwordHasher.hash(password));
+		try {
+			return members.save(member);
+		}
+		catch (MemberNotUniqueException exception) {
+			// 확인과 저장의 사이에 다른 가입이 같은 값을 저장했다. 어느 값인지 다시 묻는다.
+			rejectDuplicate(email, username);
+			throw exception;
+		}
+	}
+
+	/**
+	 * 이메일(R6)이나 사용자 이름(R7)이 이미 있으면 거부한다.
+	 */
+	private void rejectDuplicate(Email email, Username username) {
 		if (members.existsByEmail(email)) {
 			throw new DuplicateMemberException("email", "이미 있는 이메일이다");
 		}
 		if (members.existsByUsername(username)) {
 			throw new DuplicateMemberException("username", "이미 있는 사용자 이름이다");
 		}
-
-		return members.save(Member.register(username, email, passwordHasher.hash(password)));
 	}
 
 	/**
