@@ -1,0 +1,6 @@
+node_modules/
+**/video/public/_scenes/
+**/video/out/
+**/video/stills/
+# 저장소의 .gitignore가 out/을 무시한다. 최종 영상의 폴더는 넣는다.
+!/spring-lessons/out/
