@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -145,7 +146,7 @@ class LoginServiceTests {
 		}
 
 		@Override
-		public Optional<Member> findById(Long id) {
+		public Optional<Member> findById(UUID id) {
 			throw new UnsupportedOperationException();
 		}
 

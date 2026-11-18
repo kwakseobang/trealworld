@@ -3,6 +3,7 @@ package trealworld.adapter.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.util.UUID;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +25,15 @@ import trealworld.domain.Username;
  */
 class MemberAuthenticationConverterTests {
 
-	private final List<Long> asked = new ArrayList<>();
+	private static final UUID JAKE_ID = UUID.fromString("11111111-1111-4111-8111-111111111111");
+	private static final UUID FINN_ID = UUID.fromString("22222222-2222-4222-8222-222222222222");
 
-	/** 식별자가 7인 회원만 있다. */
+	private final List<UUID> asked = new ArrayList<>();
+
+	/** jake만 있다. */
 	private final GetMemberUseCase getMember = memberId -> {
 		asked.add(memberId);
-		if (!Long.valueOf(7L).equals(memberId)) {
+		if (!JAKE_ID.equals(memberId)) {
 			throw new MemberNotFoundException();
 		}
 		return Member.register(new Username("jake"), new Email("jake@example.com"), new PasswordHash("hash"));
@@ -40,25 +44,29 @@ class MemberAuthenticationConverterTests {
 	/** 웹 어댑터는 요청한 회원을 이 이름으로 안다 (java.security.Principal). */
 	@Test
 	void ac3_4_the_name_of_the_authentication_is_the_id_of_the_owner_of_the_token() {
-		Authentication authentication = converter.convert(jwt("7"));
+		Authentication authentication = converter.convert(jwt(JAKE_ID.toString()));
 
-		assertThat(authentication.getName()).isEqualTo("7");
+		assertThat(authentication.getName()).isEqualTo(JAKE_ID.toString());
 		assertThat(authentication.isAuthenticated()).isTrue();
 		assertThat(authentication.getAuthorities()).isEmpty();
 	}
 
 	@Test
 	void ac3_5_a_token_of_a_member_that_does_not_exist_is_an_authentication_failure() {
-		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt("8")));
-		assertThat(asked).containsExactly(8L);
+		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt(FINN_ID.toString())));
+		assertThat(asked).containsExactly(FINN_ID);
 	}
 
 	/** 식별자가 아닌 값은 회원을 찾지 않고 거부한다. 500이 아니다. */
 	@Test
 	void ac3_5_a_subject_that_is_not_an_id_is_an_authentication_failure() {
 		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt("jake")));
-		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt("7.0")));
-		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt(" 7")));
+		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt("7")));
+		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt(" " + JAKE_ID)));
+		assertThatExceptionOfType(AuthenticationException.class)
+				.isThrownBy(() -> converter.convert(jwt("AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA")));
+		assertThatExceptionOfType(AuthenticationException.class)
+				.isThrownBy(() -> converter.convert(jwt("1-1-1-1-1")));
 		assertThatExceptionOfType(AuthenticationException.class).isThrownBy(() -> converter.convert(jwt(null)));
 		assertThat(asked).isEmpty();
 	}

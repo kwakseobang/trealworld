@@ -1,5 +1,7 @@
 package trealworld.application.port.in;
 
+import java.util.UUID;
+
 import trealworld.domain.Member;
 
 /**
@@ -11,6 +13,6 @@ public interface GetMemberUseCase {
 	 * @param memberId 요청한 회원의 식별자. 액세스 토큰의 주인이다. 다른 회원의 식별자를 넘겨서는 안 된다 (R10)
 	 * @throws MemberNotFoundException 그 회원이 없다
 	 */
-	Member getMember(Long memberId);
+	Member getMember(UUID memberId);
 
 }

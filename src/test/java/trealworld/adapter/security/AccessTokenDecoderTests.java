@@ -3,6 +3,7 @@ package trealworld.adapter.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.util.UUID;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,16 +28,17 @@ import trealworld.domain.Username;
  */
 class AccessTokenDecoderTests {
 
+	private static final UUID JAKE_ID = UUID.fromString("11111111-1111-4111-8111-111111111111");
 	private static final Instant ISSUED = Instant.parse("2026-11-17T09:00:00Z");
 
 	private final JwtSigningKey key = new JwtSigningKey("test-secret-test-secret-test-secret-0123");
-	private final String token = new JwtAccessTokenIssuer(key, at(ISSUED)).issue(member(7L)).value();
+	private final String token = new JwtAccessTokenIssuer(key, at(ISSUED)).issue(member(JAKE_ID)).value();
 
 	@Test
 	void ac3_3_a_token_that_this_server_issued_is_accepted() {
 		Jwt jwt = decoderAt(ISSUED.plusSeconds(1)).decode(token);
 
-		assertThat(jwt.getSubject()).isEqualTo("7");
+		assertThat(jwt.getSubject()).isEqualTo(JAKE_ID.toString());
 		assertThat(jwt.getExpiresAt()).isEqualTo(ISSUED.plus(Duration.ofHours(1)));
 	}
 
@@ -59,15 +61,15 @@ class AccessTokenDecoderTests {
 	@Test
 	void adr0003_the_time_is_read_from_the_injected_clock() {
 		Instant longAgo = Instant.parse("2001-01-01T00:00:00Z");
-		String old = new JwtAccessTokenIssuer(key, at(longAgo)).issue(member(7L)).value();
+		String old = new JwtAccessTokenIssuer(key, at(longAgo)).issue(member(JAKE_ID)).value();
 
-		assertThat(decoderAt(longAgo.plusSeconds(60)).decode(old).getSubject()).isEqualTo("7");
+		assertThat(decoderAt(longAgo.plusSeconds(60)).decode(old).getSubject()).isEqualTo(JAKE_ID.toString());
 	}
 
 	@Test
 	void ac3_3_a_token_signed_with_another_key_is_rejected() {
 		JwtSigningKey another = new JwtSigningKey("another-secret-another-secret-0123456789");
-		String forged = new JwtAccessTokenIssuer(another, at(ISSUED)).issue(member(7L)).value();
+		String forged = new JwtAccessTokenIssuer(another, at(ISSUED)).issue(member(JAKE_ID)).value();
 
 		assertThatExceptionOfType(JwtException.class).isThrownBy(() -> decoderAt(ISSUED).decode(forged));
 	}
@@ -96,7 +98,7 @@ class AccessTokenDecoderTests {
 		return Clock.fixed(instant, ZoneOffset.UTC);
 	}
 
-	private static Member member(Long id) {
+	private static Member member(UUID id) {
 		Member member = Member.register(new Username("jake"), new Email("jake@example.com"),
 				new PasswordHash("stored-hash"));
 		ReflectionTestUtils.setField(member, "id", id);

@@ -1,5 +1,7 @@
 package trealworld.application.service;
 
+import java.util.UUID;
+
 import trealworld.application.port.in.GetMemberUseCase;
 import trealworld.application.port.in.MemberNotFoundException;
 import trealworld.application.port.out.MemberRepository;
@@ -18,7 +20,7 @@ public class GetMemberService implements GetMemberUseCase {
 	}
 
 	@Override
-	public Member getMember(Long memberId) {
+	public Member getMember(UUID memberId) {
 		if (memberId == null) {
 			throw new MemberNotFoundException();
 		}

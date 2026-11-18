@@ -1,5 +1,7 @@
 package trealworld.domain;
 
+import java.util.UUID;
+
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -20,10 +22,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member {
 
-	/** 회원의 식별자. 저장할 때 생긴다. */
+	/**
+	 * 회원의 식별자. 저장할 때 생긴다.
+	 * 임의의 값이다. DB를 비우고 다시 채워도 앞의 회원의 식별자가 다시 쓰이지 않는다. (ADR-0003, AC-3.4)
+	 */
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
 	@Embedded
 	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true, length = Username.MAX_CHARACTERS))

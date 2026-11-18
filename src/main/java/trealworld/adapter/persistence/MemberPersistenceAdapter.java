@@ -1,5 +1,6 @@
 package trealworld.adapter.persistence;
 
+import java.util.UUID;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -37,7 +38,7 @@ class MemberPersistenceAdapter implements MemberRepository {
 	}
 
 	@Override
-	public Optional<Member> findById(Long id) {
+	public Optional<Member> findById(UUID id) {
 		return jpaRepository.findById(id);
 	}
 

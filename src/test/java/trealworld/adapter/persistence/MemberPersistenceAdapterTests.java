@@ -92,7 +92,7 @@ class MemberPersistenceAdapterTests {
 
 	@Test
 	void ac3_5_an_id_that_is_not_saved_is_not_found() {
-		assertThat(members.findById(Long.MAX_VALUE)).isEmpty();
+		assertThat(members.findById(UUID.randomUUID())).isEmpty();
 	}
 
 	private static Member member(String username, String email) {

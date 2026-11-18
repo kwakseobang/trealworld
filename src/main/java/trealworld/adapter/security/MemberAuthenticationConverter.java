@@ -1,6 +1,8 @@
 package trealworld.adapter.security;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -20,6 +22,9 @@ import trealworld.application.port.in.MemberNotFoundException;
 @Component
 class MemberAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
+	private static final Pattern SUBJECT = Pattern
+			.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
 	private final GetMemberUseCase getMember;
 
 	MemberAuthenticationConverter(GetMemberUseCase getMember) {
@@ -28,22 +33,22 @@ class MemberAuthenticationConverter implements Converter<Jwt, AbstractAuthentica
 
 	@Override
 	public AbstractAuthenticationToken convert(Jwt jwt) {
-		Long memberId = memberId(jwt.getSubject());
+		UUID memberId = memberId(jwt.getSubject());
 		try {
 			getMember.getMember(memberId);
 		}
 		catch (MemberNotFoundException exception) {
 			throw new BadCredentialsException("토큰의 주인인 회원이 없다");
 		}
-		return new JwtAuthenticationToken(jwt, List.of(), String.valueOf(memberId));
+		return new JwtAuthenticationToken(jwt, List.of(), memberId.toString());
 	}
 
-	/** 이 서버가 발급한 토큰의 sub는 숫자만 있는 글자다. 다른 모양은 받지 않는다. */
-	private static Long memberId(String subject) {
-		if (subject == null || !subject.matches("[0-9]{1,18}")) {
+	/** 이 서버가 발급한 토큰의 sub는 UUID의 글자다 (소문자, 36글자). 다른 모양은 받지 않는다. */
+	private static UUID memberId(String subject) {
+		if (subject == null || !SUBJECT.matcher(subject).matches()) {
 			throw new BadCredentialsException("토큰의 주인이 회원의 식별자가 아니다");
 		}
-		return Long.valueOf(subject);
+		return UUID.fromString(subject);
 	}
 
 }

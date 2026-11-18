@@ -40,7 +40,7 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
 		}
 		JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 		JwtClaimsSet claims = JwtClaimsSet.builder()
-				.subject(String.valueOf(member.getId()))
+				.subject(member.getId().toString())
 				.expiresAt(clock.instant().plus(VALIDITY))
 				.build();
 		return new AccessToken(encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue());

@@ -60,7 +60,7 @@ class FilterErrorAcceptanceTests {
 	}
 
 	private RestTestClient.ResponseSpec me() {
-		String token = TestTokens.signed(TestTokens.SECRET, "1", Instant.now().plusSeconds(600));
+		String token = TestTokens.signed(TestTokens.SECRET, "11111111-1111-4111-8111-111111111111", Instant.now().plusSeconds(600));
 		return client.get().uri("/api/members/me").header("Authorization", "Bearer " + token).exchange();
 	}
 

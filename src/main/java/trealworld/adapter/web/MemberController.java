@@ -1,5 +1,6 @@
 package trealworld.adapter.web;
 
+import java.util.UUID;
 import java.security.Principal;
 
 import org.springframework.http.HttpStatus;
@@ -44,7 +45,7 @@ class MemberController {
 	 */
 	@GetMapping("/me")
 	MemberResponse me(Principal requester) {
-		return MemberResponse.of(getMember.getMember(Long.valueOf(requester.getName())));
+		return MemberResponse.of(getMember.getMember(UUID.fromString(requester.getName())));
 	}
 
 }

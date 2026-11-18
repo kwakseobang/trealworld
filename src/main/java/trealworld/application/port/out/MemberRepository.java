@@ -1,5 +1,6 @@
 package trealworld.application.port.out;
 
+import java.util.UUID;
 import java.util.Optional;
 
 import trealworld.domain.Email;
@@ -17,7 +18,7 @@ public interface MemberRepository {
 	 */
 	Member save(Member member);
 
-	Optional<Member> findById(Long id);
+	Optional<Member> findById(UUID id);
 
 	Optional<Member> findByEmail(Email email);
 

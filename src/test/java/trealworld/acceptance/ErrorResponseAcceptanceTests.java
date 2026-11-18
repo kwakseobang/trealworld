@@ -99,7 +99,7 @@ class ErrorResponseAcceptanceTests {
 	/** 만료된 토큰은 그대로 401이다. 오류의 화면을 허용한 것이 인증을 느슨하게 하지 않는다. */
 	@Test
 	void ac3_3_an_expired_token_is_still_rejected() {
-		get("/api/members/me", TestTokens.signed(TestTokens.SECRET, "1", Instant.now().minusSeconds(10)))
+		get("/api/members/me", TestTokens.signed(TestTokens.SECRET, "11111111-1111-4111-8111-111111111111", Instant.now().minusSeconds(10)))
 				.expectStatus().isUnauthorized()
 				.expectBody().jsonPath("$.instance").isEqualTo("/api/members/me");
 	}

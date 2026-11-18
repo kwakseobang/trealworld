@@ -207,7 +207,7 @@ class GetMemberAcceptanceTests {
 		String noToken = bodyOf(client.get().uri("/api/members/me").exchange().expectStatus().isUnauthorized());
 
 		// 상태만 보지 않는다. 본문의 instance가 /error이면 서버의 오류가 401에 숨은 것이다
-		for (String subject : new String[] { "999999999", "not-a-number", "-1", "7.0", null }) {
+		for (String subject : new String[] { UUID.randomUUID().toString(), "999999999", "1", "not-a-number", "-1", "7.0", null }) {
 			assertThat(bodyOf(me(signed(SECRET, subject, expiry)).expectStatus().isUnauthorized()))
 					.as("sub = %s", subject).isEqualTo(noToken).contains("\"instance\":\"/api/members/me\"");
 		}
@@ -221,7 +221,7 @@ class GetMemberAcceptanceTests {
 				clock.instant().plus(Duration.ofHours(1)))).expectStatus().isUnauthorized());
 		String expired = bodyOf(me(signed(SECRET, subjectOf(token), clock.instant().minusSeconds(10)))
 				.expectStatus().isUnauthorized());
-		String noMember = bodyOf(me(signed(SECRET, "999999999", clock.instant().plus(Duration.ofHours(1))))
+		String noMember = bodyOf(me(signed(SECRET, UUID.randomUUID().toString(), clock.instant().plus(Duration.ofHours(1))))
 				.expectStatus().isUnauthorized());
 
 		assertThat(noToken).isNotBlank().contains("액세스 토큰");
