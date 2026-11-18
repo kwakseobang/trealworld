@@ -1,0 +1,378 @@
+<!doctype html>
+<!--
+  explain-diff template. Copy this file, then replace every {{PLACEHOLDER}}.
+  Delete sections you do not use (e.g. #explore when no widget passes the gate).
+  Keep the CSS; it handles diff blocks, light/dark themes, and print.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>흐름의 수용 테스트 — 작업 7</title>
+<!-- Fonts: Pretendard (dynamic subset loads only the glyphs the page uses) + JetBrains Mono.
+     Offline, the font stacks below fall back to system fonts; the layout does not change. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Design tokens — same body palette and fonts as the ai-seminar-2026-11 deck.
+   paper / surface / ink / ink-soft / line / accent / warn. Dark mode uses the deck's cover colors. */
+:root{
+  --bg:#F6F4EE;        /* paper */
+  --card:#FFFFFF;      /* surface */
+  --fg:#15171C;        /* ink */
+  --muted:#5A606C;     /* ink-soft */
+  --line:#DDD9CE;
+  --accent:#2F55E0; --accent-soft:#E8EDFD;
+  --warn:#E2572B;   --warn-soft:#FCEBE4;
+  --add-bg:#E3F1E6; --add-fg:#1E6B3A;          /* functional green: diff additions only */
+  --del-bg:var(--warn-soft); --del-fg:#B8401C; /* removals use the deck's warn color */
+  --code-bg:#EFECE4; --hl:#FFF0B8;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+    --accent:#8FA6FF; --accent-soft:#232B4A;
+    --warn:#F08A63; --warn-soft:#3A2219;
+    --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+    --code-bg:#1A1C22; --hl:#4A4220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --card:#1D2027; --fg:#F2F3F5; --muted:#B9BECA; --line:#343844;
+  --accent:#8FA6FF; --accent-soft:#232B4A;
+  --warn:#F08A63; --warn-soft:#3A2219;
+  --add-bg:#16301F; --add-fg:#8FD6A4; --del-bg:#3A2219; --del-fg:#F5A285;
+  --code-bg:#1A1C22; --hl:#4A4220;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 var(--sans);word-break:keep-all;-webkit-font-smoothing:antialiased}
+strong,b{font-weight:700}
+a{color:var(--accent)}
+.warn{color:var(--warn)}
+.callout-warn{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:15px}
+main{max-width:780px;margin:0 auto;padding:40px 16px 80px}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;letter-spacing:-.02em}
+h1{font-size:2.1rem;font-weight:800;margin:0 0 .3em}
+h2{font-size:1.45rem;font-weight:800;margin:2.4em 0 .6em;padding-top:.5em;border-top:2px solid var(--line)}
+h3{font-size:1.12rem;font-weight:700;margin:1.8em 0 .4em}
+.kicker{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.meta{font:14px/1.5 var(--sans);color:var(--muted)}
+.meta span+span::before{content:" · "}
+.assumption{font:14px/1.5 var(--sans);background:var(--accent-soft);border-radius:8px;padding:10px 14px;margin:16px 0}
+.intuition{font-size:1.25rem;font-weight:600;line-height:1.5;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 18px;margin:1em 0}
+code{font:0.88em var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:12px 0}
+details summary{cursor:pointer;font:600 15px var(--sans)}
+figure{margin:20px 0}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figcaption{font:14px var(--sans);color:var(--muted);text-align:center;margin-top:6px}
+.step{margin-top:2.2em}
+.why{font-family:var(--sans);font-size:15px;color:var(--muted)}
+.file-role{font:14px/1.5 var(--sans);margin:14px 0 4px}
+.file-role b{font-family:var(--mono);font-weight:600}
+.bridge{font-family:var(--sans);font-size:15px;border-top:1px dashed var(--line);padding-top:10px;margin-top:14px}
+.bridge::before{content:"→ ";color:var(--accent);font-weight:700}
+/* diff blocks: one <span> per line with class add / del / ctx / skip */
+pre.diff{font:13px/1.5 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 0;overflow-x:auto;margin:6px 0 10px}
+pre.diff span{display:block;padding:0 14px;white-space:pre}
+pre.diff .add{background:var(--add-bg);color:var(--add-fg)}
+pre.diff .add::before{content:"+ "}
+pre.diff .del{background:var(--del-bg);color:var(--del-fg)}
+pre.diff .del::before{content:"- "}
+pre.diff .ctx::before{content:"  "}
+pre.diff .skip{color:var(--muted);font-style:italic}
+pre.diff .mark{background:var(--hl)}
+/* widgets */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0}
+.widget .mirrors{font:12px var(--sans);color:var(--muted);margin-top:8px}
+.widget .readout{font:13px/1.6 var(--mono)}
+.widget canvas,.widget svg{max-width:100%;touch-action:none}
+.static-fallback{display:none}
+ul.other{font:15px/1.6 var(--sans)}
+/* quiz: explanations stay hidden until the reader answers (recall first, then feedback) */
+.quiz-intro{background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:15px}
+ol.quiz{padding-left:0;list-style:none;counter-reset:q}
+ol.quiz>li{counter-increment:q;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+.q-text{font-weight:700;margin:0 0 10px}
+.q-text::before{content:"Q" counter(q) ". ";font-family:var(--mono);color:var(--accent)}
+.opts{display:grid;gap:8px}
+.opts button{font:15px/1.5 var(--sans);text-align:left;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.opts button:hover:not(:disabled){border-color:var(--accent)}
+.opts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts button.right{background:var(--add-bg);color:var(--add-fg);border-color:var(--add-fg);font-weight:600}
+.opts button.wrong{background:var(--del-bg);color:var(--del-fg);border-color:var(--del-fg)}
+.opts button:disabled{cursor:default}
+.explain{font-size:15px;border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+.explain p{margin:0 0 6px}
+.quiz-result{font-weight:700;border-radius:8px;padding:10px 14px;margin:14px 0}
+.quiz-result.pass{background:var(--add-bg);color:var(--add-fg)}
+.quiz-result.fail{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.quiz-retry{font:600 14px var(--sans);color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer}
+.answer-key{display:none;font-size:14px}
+@media print{
+  .explain,.quiz-result,.quiz-retry{display:none!important}
+  .answer-key{display:block;break-before:page}
+  .opts button{background:none;color:#000;border-color:#999}
+  body{background:#fff;color:#000;font-size:11pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .widget .live{display:none}
+  .static-fallback{display:block}
+  details{border:none;padding:0}
+  details>summary{list-style:none}
+  pre.diff{white-space:pre-wrap;break-inside:avoid}
+  h2,h3{break-after:avoid}
+}
+</style>
+<style>
+table.t{border-collapse:collapse;width:100%;font-size:15px;margin:1em 0}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+table.t th{color:var(--muted);font-weight:600}
+table.t tr.hit td{background:var(--accent-soft);font-weight:600}
+.tw{overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>따로 통과한 가입, 로그인, 조회를 테스트 1개로 잇는다</h1>
+  <div class="meta"><span>commit af28d7c · Plan 01의 작업 7</span><span>2 files</span><span>+202 / −0</span></div>
+  <div class="assumption">읽는 사람: Spring과 Spring Security를 잘 아는 개발자. 이 프로젝트의 문서(Spec 01, ADR-0003, ADR-0004)를 승인한 사람. 그래서 JWT와 <code>@SpringBootTest</code>의 기본은 설명하지 않는다. "이 테스트가 왜 필요한가"와 "무엇을 찾았는가"에 집중한다.</div>
+</header>
+
+<section id="background">
+  <h2>1. 먼저 알아야 하는 것</h2>
+  <p><b>이 커밋은 메인 코드를 바꾸지 않는다.</b> 테스트 클래스 1개와 일지를 더한다. 테스트의 수는 212개에서 213개가 된다.</p>
+  <p>작업 4, 5, 6은 가입, 로그인, 조회를 하나씩 만들었다. 기능마다 수용 테스트 클래스가 있다. 클래스마다 서버를 띄우는 설정이 다르다.</p>
+  <div class="tw"><table class="t">
+    <tr><th>수용 테스트 클래스</th><th>서명 키(<code>trealworld.jwt.secret</code>)</th><th>조회에 쓰는 토큰</th></tr>
+    <tr><td><code>GetMemberAcceptanceTests</code></td><td>고정 (<code>TestTokens.SECRET</code>)</td><td>로그인이 준 토큰, 그리고 테스트가 직접 만든 토큰</td></tr>
+    <tr><td><code>ErrorResponseAcceptanceTests</code></td><td>고정</td><td>테스트가 직접 만든 토큰</td></tr>
+    <tr><td><code>FilterErrorAcceptanceTests</code></td><td>고정</td><td>테스트가 직접 만든 토큰</td></tr>
+    <tr class="hit"><td><code>MemberFlowAcceptanceTests</code> (새 클래스)</td><td>정하지 않는다</td><td>로그인이 준 토큰</td></tr>
+  </table></div>
+  <p>나머지 2개(<code>RegisterMemberAcceptanceTests</code>, <code>LoginAcceptanceTests</code>)는 키를 정하지 않는다. 하지만 토큰으로 조회하지 않는다.</p>
+  <p>조회의 테스트가 키를 고정한 이유는 좋다. 만료된 토큰과 위조한 토큰을 테스트가 직접 만들어야 한다. 그러려면 테스트가 키를 알아야 한다.</p>
+  <details>
+    <summary>키를 정하지 않으면 서버는 무엇을 하는가 (ADR-0003)</summary>
+    <p><code>JwtSigningKey</code>는 설정 <code>trealworld.jwt.secret</code>이 비어 있으면 시작할 때 임의의 32바이트 키를 만든다. 경고를 남긴다. 토큰을 발급하는 쪽(<code>JwtAccessTokenIssuer</code>)과 검사하는 쪽(디코더)은 이 bean 1개를 함께 쓴다. <code>bootRun</code>으로 띄운 서버가 이 상태다.</p>
+  </details>
+  <p><b>문제.</b> "키를 정하지 않은 서버에서, 로그인이 준 토큰으로 조회한다"를 본 테스트가 없었다. 그것이 기본 설정이다.</p>
+</section>
+
+<section id="idea">
+  <h2>2. 핵심 생각</h2>
+  <p class="intuition">부품의 테스트는 부품마다 편한 설정을 고른다. 흐름의 테스트는 실제와 같은 설정에서, 앞의 응답을 뒤의 요청에 그대로 넣는다.</p>
+  <p>새 테스트는 값을 직접 만들지 않는다. 가입한 회원으로 로그인한다. 로그인이 준 토큰으로 조회한다. 조회가 준 이름이 가입한 이름인지 본다. 서명 키는 정하지 않는다. 그래서 "서버가 스스로 만든 키로 발급한 토큰을 같은 서버가 받아들인다"가 처음으로 테스트의 안에 들어온다.</p>
+  <figure>
+    <svg viewBox="0 0 720 150" role="img" aria-label="가입, 로그인, 조회가 응답으로 이어진다" style="width:100%;height:auto;font-family:var(--sans)">
+      <g fill="none" stroke="var(--line)" stroke-width="1.5">
+        <rect x="10" y="40" width="150" height="60" rx="10"/><rect x="195" y="40" width="150" height="60" rx="10"/>
+        <rect x="380" y="40" width="150" height="60" rx="10"/><rect x="565" y="40" width="145" height="60" rx="10"/>
+      </g>
+      <g stroke="var(--accent)" stroke-width="2"><path d="M160 70H191M345 70H376M530 70H561"/></g>
+      <g fill="var(--accent)"><path d="M195 70l-8-5v10zM380 70l-8-5v10zM565 70l-8-5v10z"/></g>
+      <g fill="currentColor" font-size="14" text-anchor="middle">
+        <text x="85" y="65">로그인</text><text x="85" y="85" font-size="12">401 (아직 회원이 없다)</text>
+        <text x="270" y="65">가입</text><text x="270" y="85" font-size="12">201 · username, email</text>
+        <text x="455" y="65">로그인</text><text x="455" y="85" font-size="12">200 · accessToken</text>
+        <text x="637" y="65">조회</text><text x="637" y="85" font-size="12">200 · 가입한 회원</text>
+      </g>
+      <g fill="var(--muted)" font-size="12" text-anchor="middle">
+        <text x="362" y="28">같은 email, 같은 비밀번호</text><text x="548" y="125">로그인이 준 토큰을 그대로</text>
+      </g>
+    </svg>
+    <figcaption>테스트 1개의 안의 요청 4개. 뒤의 요청은 앞의 결과에 의존한다.</figcaption>
+  </figure>
+</section>
+
+<section id="walkthrough">
+  <h2>4. 바뀐 것, 순서대로</h2>
+  <p class="why">3번(직접 해 보기)은 없다. 이 커밋은 계산을 바꾸지 않는다. 움직여 볼 값이 없다.</p>
+
+  <div class="step" id="step1">
+    <h3>단계 1 — 기본 설정으로 서버를 띄운다</h3>
+    <p class="why">이 단계가 이 커밋의 값의 대부분이다. 없는 것(<code>properties = ...</code>)이 중요하다.</p>
+    <p class="file-role"><b>src/test/java/trealworld/acceptance/MemberFlowAcceptanceTests.java</b> — 새 파일. 수용 테스트의 7번째 파일이다 (도우미 <code>TestTokens</code> 포함).</p>
+<pre class="diff"><span class="add">/**</span><span class="add"> * Plan 01의 작업 7. Spec 01의 목표 1, 2, 3이 이어진다: 가입 → 로그인 → 내 정보 조회.</span><span class="add"> * 서버 전체를 띄우고 HTTP로 확인한다. (ADR-0004)</span><span class="add"> * 서명 키(trealworld.jwt.secret)를 정하지 않는다. 기본 설정의 서버와 같다.</span><span class="add"> * 서버가 만든 임의의 키로 발급한 토큰을 같은 서버가 받아들이는지 본다. (ADR-0003)</span><span class="add"> */</span><span class="add">@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)</span><span class="add">@AutoConfigureRestTestClient</span><span class="add">class MemberFlowAcceptanceTests {</span><span class="add"></span><span class="add">    private static final String PASSWORD = &quot;correct-horse-battery&quot;;</span><span class="add">    private static final JsonMapper json = new JsonMapper();</span><span class="add"></span><span class="add">    @Autowired</span><span class="add">    private RestTestClient client;</span><span class="add"></span><span class="add">    /** 테스트마다 다른 회원을 쓴다. DB는 테스트끼리 함께 쓴다. */</span><span class="add">    private final String id = UUID.randomUUID().toString().substring(0, 8);</span><span class="add">    private final String username = &quot;jake-&quot; + id;</span><span class="add">    private final String email = &quot;jake-&quot; + id + &quot;@example.com&quot;;</span></pre>
+    <p>볼 곳: <code>@SpringBootTest</code>에 <code>properties</code>가 없다. 다른 수용 테스트 3개에는 <code>"trealworld.jwt.secret=" + TestTokens.SECRET</code>이 있다. 그리고 회원의 이름에 임의의 8글자를 붙인다. 수용 테스트들이 인메모리 DB 1개를 함께 쓰기 때문이다.</p>
+    <p class="bridge">서버가 실제와 같은 조건으로 떴다. 이제 요청을 잇는다.</p>
+  </div>
+
+  <div class="step" id="step2">
+    <h3>단계 2 — 요청 4개를 앞의 응답으로 잇는다</h3>
+    <p class="why">테스트의 이름은 지나가는 수용 기준 3개의 ID로 시작한다. ADR-0004가 이름에 ID를 요구한다. 작업 7에는 자기의 ID가 없다.</p>
+<pre class="diff"><span class="add">    @Test</span><span class="add">    void ac1_1_ac2_1_ac3_1_a_visitor_registers_logs_in_and_reads_their_own_information() {</span><span class="add">        // 가입의 전에는 로그인할 수 없다. 뒤의 로그인의 성공은 가입의 결과다.</span><span class="add">        login().expectStatus().isUnauthorized();</span><span class="add"></span><span class="add">        // 목표 1. 방문자가 회원이 된다.</span><span class="add">        assertThat(mapOf(register().expectStatus().isCreated()))</span><span class="add">                .containsOnlyKeys(&quot;username&quot;, &quot;email&quot;)</span><span class="add">                .containsEntry(&quot;username&quot;, username)</span><span class="add">                .containsEntry(&quot;email&quot;, email);</span><span class="add"></span><span class="add">        // 목표 2. 회원이 액세스 토큰을 받는다.</span><span class="add">        Map&lt;String, Object&gt; loggedIn = mapOf(login().expectStatus().isOk());</span><span class="add">        assertThat(loggedIn).containsOnlyKeys(&quot;accessToken&quot;);</span><span class="add">        String accessToken = (String) loggedIn.get(&quot;accessToken&quot;);</span><span class="add">        assertThat(accessToken).isNotBlank();</span><span class="add"></span><span class="add">        // 목표 3. 로그인이 준 토큰으로 가입한 회원의 정보를 받는다.</span><span class="add">        assertThat(mapOf(me(accessToken).expectStatus().isOk()))</span><span class="add">                .containsOnlyKeys(&quot;username&quot;, &quot;email&quot;)</span><span class="add">                .containsEntry(&quot;username&quot;, username)</span><span class="add">                .containsEntry(&quot;email&quot;, email);</span><span class="add">    }</span></pre>
+    <p>볼 곳 3개.</p>
+    <ul>
+      <li><b>첫 줄의 401.</b> 가입의 전에는 로그인이 안 된다. 그래서 뒤의 200은 가입의 결과다. 이 줄이 없으면 "누구나 로그인된다"는 결함에서도 테스트가 통과한다.</li>
+      <li><b><code>containsOnlyKeys</code>.</b> 응답에 비밀번호의 해시나 id가 섞이면 실패한다.</li>
+      <li><b>마지막 단언.</b> 조회의 응답을 가입에 쓴 <code>username</code>, <code>email</code>과 비교한다. "어떤 회원이 나온다"가 아니라 "가입한 그 회원이 나온다"를 본다.</li>
+    </ul>
+    <p class="bridge">남은 것은 요청을 보내는 작은 메서드들이다.</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h3>단계 3 — 요청을 보내는 도우미</h3>
+    <p class="why">테스트의 본문이 흐름만 읽히게 한다.</p>
+<pre class="diff"><span class="add">    private RestTestClient.ResponseSpec register() {</span><span class="add">        Map&lt;String, String&gt; body = new LinkedHashMap&lt;&gt;();</span><span class="add">        body.put(&quot;username&quot;, username);</span><span class="add">        body.put(&quot;email&quot;, email);</span><span class="add">        body.put(&quot;password&quot;, PASSWORD);</span><span class="add">        return client.post().uri(&quot;/api/members&quot;).contentType(MediaType.APPLICATION_JSON).body(body).exchange();</span><span class="add">    }</span><span class="add"></span><span class="add">    private RestTestClient.ResponseSpec login() {</span><span class="add">        Map&lt;String, String&gt; body = new LinkedHashMap&lt;&gt;();</span><span class="add">        body.put(&quot;email&quot;, email);</span><span class="add">        body.put(&quot;password&quot;, PASSWORD);</span><span class="add">        return client.post().uri(&quot;/api/auth/login&quot;).contentType(MediaType.APPLICATION_JSON).body(body).exchange();</span><span class="add">    }</span><span class="add"></span><span class="add">    private RestTestClient.ResponseSpec me(String accessToken) {</span><span class="add">        return client.get().uri(&quot;/api/members/me&quot;).header(&quot;Authorization&quot;, &quot;Bearer &quot; + accessToken).exchange();</span><span class="add">    }</span><span class="add"></span><span class="add">    private static Map&lt;String, Object&gt; mapOf(RestTestClient.ResponseSpec response) {</span><span class="add">        String body = response.expectBody(String.class).returnResult().getResponseBody();</span><span class="add">        return json.readValue(body, new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span><span class="add">        });</span><span class="add">    }</span></pre>
+    <p>볼 곳: <code>mapOf</code>는 본문을 문자열로 받아서 <code>Map</code>으로 읽는다. 응답의 DTO를 쓰지 않는다. 테스트가 메인 코드의 타입에 기대면, 필드의 이름이 바뀌어도 테스트가 따라 바뀐다.</p>
+    <p class="bridge">테스트는 처음부터 통과했다. 구현이 이미 있었다. 그래서 "이 테스트가 무엇을 잡는가"를 따로 확인해야 했다. 6번이 그 결과다.</p>
+  </div>
+</section>
+
+<section id="other">
+  <h2>5. 다른 바뀐 것</h2>
+  <ul class="other">
+    <li><code>docs/journal/2026-11-18.md</code> — 스텝 72(작업 7의 과정: 결함의 실험, 실제 서버의 응답, 리뷰 메모 5개)와 스텝 73(이 커밋)을 더했다. +112줄.</li>
+    <li><code>MemberFlowAcceptanceTests.java</code>의 1 ~ 19줄 — <code>package</code>와 <code>import</code>. 89 ~ 90줄 — 닫는 괄호.</li>
+  </ul>
+</section>
+
+<section id="review">
+  <h2>6. 리뷰 메모</h2>
+  <p>새 테스트가 처음부터 통과했다. 그래서 메인 코드에 결함을 1개씩 넣고 전체 213개를 돌렸다. 결함은 커밋하지 않았다.</p>
+  <div class="tw"><table class="t" id="defects">
+    <tr><th>넣은 결함</th><th>실패한 테스트</th><th>새 테스트</th></tr>
+    <tr class="hit"><td>D1. 발급과 검사가 서로 다른 임의의 키를 쓴다 (키를 정하지 않았을 때만)</td><td>1개</td><td>실패 — 이 테스트만</td></tr>
+    <tr><td>D2. 토큰의 <code>sub</code>에 다른 회원의 id를 넣는다</td><td>19개</td><td>실패</td></tr>
+    <tr><td>D3. 가입이 다른 비밀번호의 해시를 저장한다</td><td>32개</td><td>실패</td></tr>
+    <tr><td>D4. 조회가 앞의 회원을 돌려준다</td><td>5개</td><td>실패</td></tr>
+  </table></div>
+  <ul>
+    <li id="memo1"><b>확인됨 · 고치지 않음 — 키를 고정하고 서버를 다시 시작하면 옛 토큰이 다른 회원의 정보를 읽는다.</b> 입력: jake가 가입(id 1)하고 토큰을 받는다 → 같은 키로 서버를 다시 시작한다 → finn이 가입(id 1)한다 → jake의 토큰으로 조회한다. 결과: 200과 finn의 정보. AC-3.4를 어긴다. 원인: <code>sub</code>는 DB가 만든 번호다. 인메모리 DB는 1부터 다시 센다. 키를 정하지 않으면 일어나지 않는다 (옛 토큰은 401). 이 커밋의 범위가 아니다.</li>
+    <li><b>확인됨 — 기본 설정에서 "로그인의 토큰으로 조회한다"를 보는 테스트는 이 1개뿐이다.</b> 이 테스트를 지우면 D1을 잡는 것이 없다.</li>
+    <li><b>읽음 — 실패의 글이 단계를 말하지 않는다.</b> 글은 "200을 기대했는데 401이다"다. 로그인의 401인지 조회의 401인지는 줄 번호로만 안다.</li>
+    <li><b>동작은 확인됨, 규칙은 추정 — <code>bearer</code>(소문자)와 토큰의 뒤의 공백을 서버가 받아들인다.</b> 테스트가 없다. HTTP의 규칙으로 맞다고 기억한다. 확인하지 않았다.</li>
+    <li><b>지키지 못한 것 — ADR-0004의 "테스트가 먼저 실패한다".</b> 구현이 먼저 있었다. 빨강은 위의 표의 결함으로 봤다.</li>
+  </ul>
+</section>
+
+<section id="quiz"
+  data-msg-pass="첫 시도에 {n} / {total} — 이 변경을 이해했습니다. 리뷰를 요청해도 됩니다."
+  data-msg-fail="첫 시도에 {n} / {total}. 연결된 부분을 다시 읽고 한 번 더 풀어 보세요."
+  data-msg-retry="다시 풀기"
+  data-msg-key="정답">
+  <h2>7. 이해했는지 확인하기</h2>
+  <p class="quiz-intro">점수를 매기려는 것이 아니다. 아직 이해하지 못한 곳을 보여 준다. 권하는 규칙: 모두 맞히기 전에는 이 변경의 리뷰를 요청하지 않는다.</p>
+  <ol class="quiz">
+    <li data-answer="c">
+      <p class="q-text">이 테스트를 <code>GetMemberAcceptanceTests</code>의 안으로 옮기면 무엇이 달라지는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">달라지는 것이 없다. 같은 요청을 보낸다.</button>
+        <button type="button" data-opt="b">DB를 함께 써서 회원의 이름이 겹친다.</button>
+        <button type="button" data-opt="c">서버가 고정한 키로 뜬다. 임의의 키의 경로를 보는 테스트가 없어진다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>그 클래스는 <code>trealworld.jwt.secret</code>을 고정한다. 요청은 같아도 서버의 설정이 다르다. D1은 키를 정하지 않았을 때만 나타난다. 이름은 임의의 8글자가 있어서 겹치지 않는다.</p>
+        <a href="#background">다시 읽기: 1. 먼저 알아야 하는 것</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">테스트의 첫 줄(<code>login().expectStatus().isUnauthorized()</code>)을 지웠다. 어떤 결함을 놓치게 되는가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">없는 회원에게도 토큰을 주고, 그 토큰으로 뒤에 가입한 회원이 조회되는 결함.</button>
+        <button type="button" data-opt="b">가입이 틀린 해시를 저장하는 결함 (D3).</button>
+        <button type="button" data-opt="c">발급과 검사의 키가 다른 결함 (D1).</button>
+      </div>
+      <div class="explain" hidden>
+        <p>첫 줄은 "뒤의 로그인의 성공이 가입의 결과다"를 보인다. D3과 D1은 뒤의 줄(로그인의 200, 조회의 200)이 잡는다.</p>
+        <a href="#step2">다시 읽기: 단계 2</a>
+      </div>
+    </li>
+    <li data-answer="b">
+      <p class="q-text">D1에서 기존의 212개가 모두 통과한 이유는 무엇인가?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">기존의 테스트는 로그인의 토큰으로 조회한 적이 없다.</button>
+        <button type="button" data-opt="b">토큰으로 조회하는 테스트는 모두 키를 고정한 서버에서 돈다. 결함은 키가 없을 때만 나타난다.</button>
+        <button type="button" data-opt="c">기존의 테스트는 서명을 검사하지 않는 mock을 쓴다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p><code>GetMemberAcceptanceTests</code>도 로그인의 토큰으로 조회한다. 하지만 키를 고정한다. 키가 설정에서 오면 발급과 검사가 같은 값을 읽는다. 수용 테스트는 mock을 쓰지 않는다.</p>
+        <a href="#defects">다시 읽기: 6. 결함의 표</a>
+      </div>
+    </li>
+    <li data-answer="c">
+      <p class="q-text">리뷰 메모 1의 순서를 <b>키를 정하지 않은</b> 서버에서 그대로 한다. jake의 옛 토큰으로 조회하면?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">200과 finn의 정보. id가 같기 때문이다.</button>
+        <button type="button" data-opt="b">200과 jake의 정보. 토큰에 이름이 들어 있다.</button>
+        <button type="button" data-opt="c">401. 다시 시작한 서버는 새 키를 만들었다. 옛 서명이 맞지 않는다.</button>
+      </div>
+      <div class="explain" hidden>
+        <p>임의의 키는 서버를 다시 시작하면 바뀐다. 옛 토큰은 서명의 검사에서 떨어진다. 토큰에는 <code>sub</code>와 <code>exp</code>만 있다. 이름은 없다. 그래서 ADR-0003은 "DB가 인메모리인 동안" 임의의 키를 받아들였다.</p>
+        <a href="#memo1">다시 읽기: 리뷰 메모 1</a>
+      </div>
+    </li>
+    <li data-answer="a">
+      <p class="q-text">마지막 단언에서 <code>containsEntry("username", username)</code>을 빼고 <code>containsOnlyKeys</code>만 남겼다. D1 ~ D4 중 이 테스트가 더는 잡지 못하는 것은?</p>
+      <div class="opts">
+        <button type="button" data-opt="a">D4 (조회가 앞의 회원을 돌려준다). 응답의 모양은 같고 값만 다르다.</button>
+        <button type="button" data-opt="b">D1 (키가 다르다).</button>
+        <button type="button" data-opt="c">D3 (틀린 해시).</button>
+      </div>
+      <div class="explain" hidden>
+        <p>D1은 조회의 401로, D3은 로그인의 401로 나타난다. 상태의 단언이 잡는다. D4는 200과 올바른 모양의 본문을 준다. 값을 비교해야 잡는다.</p>
+        <a href="#step2">다시 읽기: 단계 2</a>
+      </div>
+    </li>
+  </ol>
+  <p class="quiz-result" hidden aria-live="polite"></p>
+  <button type="button" class="quiz-retry" hidden></button>
+  <div class="answer-key"></div>
+</section>
+
+</main>
+<script>
+/* Quiz behavior — keep as is. Reads the markup in #quiz; no per-document changes needed. */
+(function(){
+  var quiz=document.getElementById('quiz'); if(!quiz) return;
+  var items=[].slice.call(quiz.querySelectorAll('ol.quiz>li'));
+  var result=quiz.querySelector('.quiz-result'), retry=quiz.querySelector('.quiz-retry');
+  var state=[]; // per question: undefined = unanswered, true/false = first try right/wrong
+  function fill(msg,n){return (msg||'{n} / {total}').replace('{n}',n).replace('{total}',items.length);}
+  function finish(){
+    if(state.filter(function(s){return s!==undefined;}).length<items.length) return;
+    var n=state.filter(Boolean).length, pass=n===items.length;
+    result.textContent=fill(quiz.dataset[pass?'msgPass':'msgFail'],n);
+    result.className='quiz-result '+(pass?'pass':'fail'); result.hidden=false;
+    retry.hidden=pass;
+  }
+  items.forEach(function(li,i){
+    var buttons=[].slice.call(li.querySelectorAll('.opts button'));
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){
+        var ok=b.dataset.opt===li.dataset.answer;
+        if(state[i]===undefined) state[i]=ok;   // only the first try counts
+        b.classList.add(ok?'right':'wrong'); b.disabled=true;
+        if(ok){ buttons.forEach(function(x){x.disabled=true;}); }
+        li.querySelector('.explain').hidden=false;
+        finish();
+      });
+    });
+  });
+  retry.textContent=quiz.dataset.msgRetry||'Retry';
+  retry.addEventListener('click',function(){
+    state=[];
+    quiz.querySelectorAll('.opts button').forEach(function(b){b.disabled=false;b.className='';});
+    quiz.querySelectorAll('.explain').forEach(function(e){e.hidden=true;});
+    result.hidden=true; retry.hidden=true;
+    quiz.scrollIntoView({behavior:'smooth'});
+  });
+  // Printed answer key (shown only in print, on its own page).
+  var key=quiz.querySelector('.answer-key'), h=document.createElement('h3'), ol=document.createElement('ol');
+  h.textContent=quiz.dataset.msgKey||'Answer key'; key.appendChild(h);
+  items.forEach(function(li){
+    var right=li.querySelector('.opts button[data-opt="'+li.dataset.answer+'"]');
+    var why=li.querySelector('.explain p'), row=document.createElement('li');
+    row.textContent=(right?right.textContent:'?')+(why?' — '+why.textContent:'');
+    ol.appendChild(row);
+  });
+  key.appendChild(ol);
+})();
+</script>
+</body>
+</html>
