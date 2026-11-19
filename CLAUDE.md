@@ -33,6 +33,7 @@
 - 문장은 **반드시** ASD-STE100의 원칙으로 써**야 한다.** (MUST) 능동으로 쓴다. 문장은 짧게 쓴다. 한 문장에 요구는 하나다. 한 개념에 한 용어를 쓴다. 범위가 흐린 말을 쓰지 않는다.
 - 자세한 규칙은 `tstack/skills/t-mode/references/doc-style.md`에 있다.
 - 문서를 고친 뒤에 `python3 tstack/skills/t-mode/scripts/tstack-check.py keywords`를 실행하는 것을 **권장한다.** (SHOULD) 이 검사는 RFC 2119의 키워드만 본다. ASD-STE100의 검사는 없다.
+- CI(`.github/workflows/ci.yml`)가 push마다 `./gradlew build`와 `tstack-check.py`의 `trace`, `keywords`, `self`를 돌린다. 검사의 통과는 **반드시** 끝의 코드로 확인**해야 한다.** (MUST) 출력의 일부만 읽고 통과로 판단하지 않는다.
 
 ## 리뷰에서 배운 것
 

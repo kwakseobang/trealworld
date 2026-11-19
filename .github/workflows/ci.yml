@@ -1,0 +1,63 @@
+# 이 저장소의 검사를 push와 pull request마다 돌린다.
+# 로컬의 명령과 같다. 판정은 명령의 끝의 코드다. 출력을 사람이 읽는 것에 기대지 않는다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 빌드, 테스트, mutation testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # 테스트 전체, ArchUnit, PIT(domain과 application, 기준 100)를 돌린다. (ADR-0004)
+      - name: ./gradlew build
+        run: ./gradlew build --no-daemon
+
+      - name: 보고서를 남긴다
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            build/reports/tests/test
+            build/reports/pitest
+          if-no-files-found: ignore
+
+  docs:
+    name: 문서의 검사 (tstack-check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # 수용 기준과 규칙의 ID마다 테스트가 있는가.
+      - name: trace
+        run: python3 tstack/skills/t-mode/scripts/tstack-check.py trace
+
+      # RFC 2119의 키워드가 규칙대로 쓰였는가. (CLAUDE.md의 "문서의 문체")
+      - name: keywords
+        run: python3 tstack/skills/t-mode/scripts/tstack-check.py keywords
+
+      # tstack의 색인과 파일이 맞는가.
+      - name: self
+        run: python3 tstack/skills/t-mode/scripts/tstack-check.py self
