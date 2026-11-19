@@ -126,7 +126,7 @@ python3 tstack/skills/t-mode/scripts/tstack-check.py keywords
 
 ## 과정을 읽는 다른 방법
 
-- **설명 문서 11개** (`explain-diff-*.html`). 커밋 하나를 배경부터 설명하고 퀴즈로 끝난다. 브라우저에서 연다. 순서: [킥오프](explain-diff-kickoff-brainstorming.html) → [문서](explain-diff-member-slice-docs.html) → [뼈대](explain-diff-project-skeleton.html) → [아키텍처 테스트](explain-diff-architecture-tests.html) → [도메인](explain-diff-domain-model.html) → [가입](explain-diff-member-signup.html) → [로그인](explain-diff-member-login.html) → [조회](explain-diff-member-profile.html) → [오류의 응답](explain-diff-error-dispatch.html) → [문체](explain-diff-rfc2119-ste100-docs.html) → [전체 흐름](explain-diff-member-flow.html)
+- **설명 문서 11개** (`explain-diff-*.html`). 커밋 하나를 배경부터 설명하고 퀴즈로 끝난다. 브라우저에서 연다. 이 문서를 만드는 스킬이 저장소에 있다: [explain-diff](.claude/skills/explain-diff/SKILL.md). Claude Code에서 `/explain-diff <커밋>`으로 쓴다. 순서: [킥오프](explain-diff-kickoff-brainstorming.html) → [문서](explain-diff-member-slice-docs.html) → [뼈대](explain-diff-project-skeleton.html) → [아키텍처 테스트](explain-diff-architecture-tests.html) → [도메인](explain-diff-domain-model.html) → [가입](explain-diff-member-signup.html) → [로그인](explain-diff-member-login.html) → [조회](explain-diff-member-profile.html) → [오류의 응답](explain-diff-error-dispatch.html) → [문체](explain-diff-rfc2119-ste100-docs.html) → [전체 흐름](explain-diff-member-flow.html)
 - **강의 영상** (3분). Spring 백엔드 개발자가 기억할 교훈 7가지: [spring-lessons.mp4](learn/spring-lessons/out/spring-lessons.mp4)
 - **학습 게임 2개**. JWT를 게임으로 배운다: [토큰 마을](game-token-village.html), [토큰 문지기](game-token-gatekeeper.html)
 - **AI와 일한 방식의 평가**: [ai-collab-scorecard.html](ai-collab-scorecard.html) ([PDF](ai-collab-scorecard.pdf))
