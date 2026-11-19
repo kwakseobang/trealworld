@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -85,6 +86,31 @@ class ArchitectureTests {
 				.should().onlyDependOnClassesThat()
 				.resideInAnyPackage(DOMAIN, "java..", "jakarta.persistence..", "lombok..")
 				.as("ADR-0002: domain은 Java, JPA 애너테이션, Lombok에만 의존할 수 있다")
+				.check(classes);
+	}
+
+	/** ADR-0002가 domain에 허용한 것은 JPA의 매핑 애너테이션이다. EntityManager 같은 실행 API가 아니다. */
+	@Test
+	void adr0002_domain_uses_only_the_mapping_annotations_of_jpa() {
+		noClasses().that().resideInAPackage(DOMAIN)
+				.should().dependOnClassesThat(resideInAPackage("jakarta.persistence..")
+						.and(not(JavaClass.Predicates.ANNOTATIONS)).and(not(JavaClass.Predicates.ENUMS)))
+				.as("ADR-0002: domain은 JPA의 애너테이션과 그 속성의 enum만 쓴다")
+				.check(classes);
+	}
+
+	/** 규칙 4와 5는 패키지로 어댑터를 가른다. 그 패키지의 밖에 둔 어댑터는 규칙을 빠져나간다. */
+	@Test
+	void adr0002_every_adapter_is_in_one_of_the_adapter_packages() {
+		classes().that().resideInAPackage(ADAPTER).and().doNotHaveSimpleName("package-info")
+				.should().resideInAnyPackage(WEB_ADAPTER, "trealworld.adapter.persistence..",
+						"trealworld.adapter.security..")
+				.as("ADR-0002: 어댑터는 web, persistence, security의 안에 둔다")
+				.allowEmptyShould(true)
+				.check(classes);
+		classes().that().areAnnotatedWith("org.springframework.web.bind.annotation.RestController")
+				.should().resideInAPackage(WEB_ADAPTER)
+				.as("ADR-0002: 컨트롤러는 웹 어댑터에 둔다")
 				.check(classes);
 	}
 

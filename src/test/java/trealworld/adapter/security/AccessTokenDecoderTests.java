@@ -46,11 +46,14 @@ class AccessTokenDecoderTests {
 	@Test
 	void ac3_3_a_token_is_accepted_until_it_expires() {
 		assertThat(decoderAt(ISSUED.plus(Duration.ofMinutes(59)).plusSeconds(59)).decode(token)).isNotNull();
-		assertThat(decoderAt(ISSUED.plus(Duration.ofHours(1))).decode(token)).isNotNull();
+		assertThat(decoderAt(ISSUED.plus(Duration.ofHours(1)).minusMillis(1)).decode(token)).isNotNull();
 	}
 
 	@Test
 	void ac3_3_an_expired_token_is_rejected() {
+		// 만료 시각은 토큰을 받지 않는 첫 시각이다 (RFC 7519의 exp).
+		assertThatExceptionOfType(JwtException.class)
+				.isThrownBy(() -> decoderAt(ISSUED.plus(Duration.ofHours(1))).decode(token));
 		assertThatExceptionOfType(JwtException.class)
 				.isThrownBy(() -> decoderAt(ISSUED.plus(Duration.ofHours(1)).plusSeconds(1)).decode(token));
 		assertThatExceptionOfType(JwtException.class)
@@ -103,6 +106,17 @@ class AccessTokenDecoderTests {
 				new PasswordHash("stored-hash"));
 		ReflectionTestUtils.setField(member, "id", id);
 		return member;
+	}
+
+	/** ADR-0003: 토큰에는 만료 시각이 반드시 있다. 서명이 맞아도 만료 시각이 없으면 거부한다. */
+	@Test
+	void adr0003_a_signed_token_without_an_expiry_is_rejected() throws Exception {
+		com.nimbusds.jwt.SignedJWT jwt = new com.nimbusds.jwt.SignedJWT(
+				new com.nimbusds.jose.JWSHeader(com.nimbusds.jose.JWSAlgorithm.HS256),
+				new JWTClaimsSet.Builder().subject(JAKE_ID.toString()).build());
+		jwt.sign(new com.nimbusds.jose.crypto.MACSigner(key.secretKey()));
+
+		assertThatExceptionOfType(JwtException.class).isThrownBy(() -> decoderAt(ISSUED).decode(jwt.serialize()));
 	}
 
 }

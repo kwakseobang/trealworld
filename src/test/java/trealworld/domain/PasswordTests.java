@@ -67,4 +67,11 @@ class PasswordTests {
 		assertThat(new Password("correct-horse-battery").toString()).doesNotContain("correct-horse-battery");
 	}
 
+	/** 짝이 없는 서로게이트는 UTF-8로 바꿀 수 없다. 받으면 서로 다른 비밀번호가 같은 바이트가 된다. */
+	@Test
+	void r4_password_that_is_not_valid_unicode_is_rejected() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new Password("aaaaaaaa\uD800"));
+		assertThatIllegalArgumentException().isThrownBy(() -> new Password("\uDC00aaaaaaaa"));
+	}
+
 }

@@ -15,7 +15,7 @@ class UsernameTests {
 
 	@ParameterizedTest
 	@NullSource
-	@ValueSource(strings = { "", " ", "\t\n" })
+	@ValueSource(strings = { "", " ", "\t\n", "\u00A0", "\u3000", " \u00A0\u2003" })
 	void r3_username_that_is_empty_is_rejected(String value) {
 		assertThatIllegalArgumentException().isThrownBy(() -> new Username(value));
 	}
@@ -56,6 +56,13 @@ class UsernameTests {
 	void r3_characters_are_counted_as_code_points() {
 		assertThat(new Username("😀".repeat(50)).value()).isEqualTo("😀".repeat(50));
 		assertThatIllegalArgumentException().isThrownBy(() -> new Username("😀".repeat(51)));
+	}
+
+	/** 공백은 유니코드의 공백이다. 줄을 바꾸지 않는 공백(U+00A0)과 전각 공백(U+3000)도 지운다. */
+	@Test
+	void r3_unicode_whitespace_around_a_username_is_removed() {
+		assertThat(new Username("\u00A0jake\u3000").value()).isEqualTo("jake");
+		assertThat(new Username("\u00A0jake")).isEqualTo(new Username("jake"));
 	}
 
 }

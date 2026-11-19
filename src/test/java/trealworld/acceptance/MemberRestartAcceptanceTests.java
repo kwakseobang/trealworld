@@ -43,12 +43,20 @@ class MemberRestartAcceptanceTests {
 			// 다시 시작한 서버의 첫 회원은 finn이다. jake는 없다.
 			assertThat(register(second, "finn").statusCode()).isEqualTo(201);
 
+			String finnToken = (String) mapOf(login(second, "finn")).get("accessToken");
+
+			// 두 서버가 설정한 키를 쓴다. 옛 토큰의 서명은 다시 시작한 서버에서도 맞다.
+			// 이것이 없으면 "서버가 키를 무시하고 임의의 키를 쓴다"는 결함에서도 아래의 401이 나온다.
+			assertThat(TestTokens.isSignedWith(TestTokens.SECRET, jakeToken)).isTrue();
+			assertThat(TestTokens.isSignedWith(TestTokens.SECRET, finnToken)).isTrue();
+			// 식별자는 다시 쓰이지 않는다.
+			assertThat(TestTokens.subjectOf(jakeToken)).isNotEqualTo(TestTokens.subjectOf(finnToken));
+
 			HttpResponse<String> response = me(second, jakeToken);
 
 			assertThat(response.body()).doesNotContain("finn");
 			assertThat(response.statusCode()).isEqualTo(401);
 			// finn 자신의 토큰은 된다. 서버가 모든 토큰을 거부하는 것이 아니다.
-			String finnToken = (String) mapOf(login(second, "finn")).get("accessToken");
 			assertThat(mapOf(me(second, finnToken))).containsEntry("username", "finn");
 		}
 	}

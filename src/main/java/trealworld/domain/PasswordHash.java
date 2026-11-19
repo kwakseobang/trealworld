@@ -14,4 +14,10 @@ public record PasswordHash(String value) {
 		}
 	}
 
+	/** 해시가 로그에 남지 않게 한다. */
+	@Override
+	public String toString() {
+		return "PasswordHash[****]";
+	}
+
 }

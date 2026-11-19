@@ -39,6 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 class RegisterMemberAcceptanceTests {
 
 	private static final String PASSWORD = "correct-horse-battery";
+	private static final String OTHER_PASSWORD = "another-horse-battery";
 
 	@Autowired
 	private RestTestClient client;
@@ -130,11 +131,12 @@ class RegisterMemberAcceptanceTests {
 	void ac1_5_an_email_that_already_exists_is_rejected() {
 		register(username, email, PASSWORD).expectStatus().isCreated();
 
-		register("other-" + id, email, PASSWORD)
+		register("other-" + id, email, OTHER_PASSWORD)
 				.expectStatus().isEqualTo(409)
 				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
 				.expectBody()
 				.jsonPath("$.errors.email").exists();
+		the_first_member_is_not_changed();
 	}
 
 	/** 같은 값의 가입이 동시에 와도 회원은 하나다. 나머지는 모두 409다. 500은 없다. */
@@ -165,10 +167,76 @@ class RegisterMemberAcceptanceTests {
 	void ac1_6_a_username_that_already_exists_is_rejected() {
 		register(username, email, PASSWORD).expectStatus().isCreated();
 
-		register(username, "other-" + id + "@example.com", PASSWORD)
+		register(username, "other-" + id + "@example.com", OTHER_PASSWORD)
 				.expectStatus().isEqualTo(409)
 				.expectBody()
 				.jsonPath("$.errors.username").exists();
+		the_first_member_is_not_changed();
+		assertThat(statusOfLogin("other-" + id + "@example.com", OTHER_PASSWORD)).isEqualTo(401);
+	}
+
+	/** "거부한다"는 요청한 일을 하지 않는다는 뜻이다. 처음의 회원은 그대로다. */
+	private void the_first_member_is_not_changed() {
+		assertThat(statusOfLogin(email, PASSWORD)).isEqualTo(200);
+		assertThat(statusOfLogin(email, OTHER_PASSWORD)).isEqualTo(401);
+		assertThat(new JdbcTemplate(dataSource).queryForObject("select username from member where email = ?",
+				String.class, email)).isEqualTo(username);
+	}
+
+	private int statusOfLogin(String email, String password) {
+		Map<String, String> body = new LinkedHashMap<>();
+		body.put("email", email);
+		body.put("password", password);
+		return client.post().uri("/api/auth/login").contentType(MediaType.APPLICATION_JSON).body(body).exchange()
+				.returnResult().getStatus().value();
+	}
+
+	/** 이메일만 같은 가입이 동시에 온다. 사용자 이름은 모두 다르다. DB의 이메일의 제약만 막을 수 있다. */
+	@Test
+	void ac1_5_registrations_with_the_same_email_at_the_same_time_create_one_member() throws Exception {
+		List<String> results = atTheSameTime(i -> register("jake-" + i + "-" + id, email, PASSWORD));
+
+		assertThat(results).filteredOn(result -> result.startsWith("201")).hasSize(1);
+		assertThat(results).filteredOn(result -> result.startsWith("409") && result.contains("\"errors\":{\"email\""))
+				.hasSize(results.size() - 1);
+		assertThat(new JdbcTemplate(dataSource).queryForObject("select count(*) from member where email = ?",
+				Integer.class, email)).isEqualTo(1);
+	}
+
+	/** 사용자 이름만 같은 가입이 동시에 온다. 이메일은 모두 다르다. */
+	@Test
+	void ac1_6_registrations_with_the_same_username_at_the_same_time_create_one_member() throws Exception {
+		List<String> results = atTheSameTime(i -> register(username, "jake-" + i + "-" + id + "@example.com", PASSWORD));
+
+		assertThat(results).filteredOn(result -> result.startsWith("201")).hasSize(1);
+		assertThat(results).filteredOn(result -> result.startsWith("409") && result.contains("\"errors\":{\"username\""))
+				.hasSize(results.size() - 1);
+		assertThat(new JdbcTemplate(dataSource).queryForObject("select count(*) from member where username = ?",
+				Integer.class, username)).isEqualTo(1);
+	}
+
+	/** 요청 12개를 같은 순간에 보낸다. 결과는 "상태 본문"이다. */
+	private List<String> atTheSameTime(java.util.function.IntFunction<RestTestClient.ResponseSpec> request)
+			throws Exception {
+		int requests = 12;
+		CountDownLatch start = new CountDownLatch(1);
+		List<Future<String>> futures = new ArrayList<>();
+		try (ExecutorService executor = Executors.newFixedThreadPool(requests)) {
+			for (int i = 0; i < requests; i++) {
+				int number = i;
+				futures.add(executor.submit(() -> {
+					start.await();
+					var result = request.apply(number).expectBody(String.class).returnResult();
+					return result.getStatus().value() + " " + result.getResponseBody();
+				}));
+			}
+			start.countDown();
+		}
+		List<String> results = new ArrayList<>();
+		for (Future<String> future : futures) {
+			results.add(future.get());
+		}
+		return results;
 	}
 
 	@Test
@@ -215,7 +283,10 @@ class RegisterMemberAcceptanceTests {
 	void adr0005_a_body_that_is_not_json_is_rejected_as_problem_details() {
 		client.post().uri("/api/members").contentType(MediaType.APPLICATION_JSON).body("not json").exchange()
 				.expectStatus().isBadRequest()
-				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);
+				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+				.expectBody()
+				.jsonPath("$.status").isEqualTo(400)
+				.jsonPath("$.instance").isEqualTo("/api/members");
 	}
 
 	private RestTestClient.ResponseSpec register(String username, String email, String password) {
@@ -283,6 +354,37 @@ class RegisterMemberAcceptanceTests {
 	private String emailOfLength(int length) {
 		String end = "-" + id + "@example.com";
 		return "a".repeat(length - end.length()) + end;
+	}
+
+	/** ADR-0005: 요청의 값은 JSON의 문자열이다. 숫자와 참거짓을 글자로 바꿔서 받지 않는다. */
+	@ParameterizedTest
+	@ValueSource(strings = { "\"password\": 12345678", "\"password\": 1234.5678", "\"password\": true" })
+	void adr0005_a_value_that_is_not_a_json_string_is_rejected(String password) {
+		String body = "{\"username\": \"" + username + "\", \"email\": \"" + email + "\", " + password + "}";
+
+		client.post().uri("/api/members").contentType(MediaType.APPLICATION_JSON).body(body).exchange()
+				.expectStatus().isBadRequest()
+				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+				.expectBody()
+				.jsonPath("$.instance").isEqualTo("/api/members")
+				.jsonPath("$.errors").doesNotExist();
+		assertThat(new JdbcTemplate(dataSource).queryForObject("select count(*) from member where email = ?",
+				Integer.class, email)).isZero();
+	}
+
+	/** ADR-0005: 서버는 표에 없는 필드를 무시한다. 그 필드는 회원의 값이 되지 않는다. */
+	@Test
+	void adr0005_a_field_that_is_not_in_the_request_is_ignored() {
+		String body = "{\"username\": \"" + username + "\", \"email\": \"" + email + "\", \"password\": \"" + PASSWORD
+				+ "\", \"id\": \"11111111-1111-4111-8111-111111111111\", \"passwordHash\": \"x\", \"role\": \"admin\"}";
+
+		String response = bodyOf(client.post().uri("/api/members").contentType(MediaType.APPLICATION_JSON).body(body)
+				.exchange().expectStatus().isCreated());
+
+		assertThat(new JsonMapper().readValue(response, Map.class).keySet()).containsExactlyInAnyOrder("username", "email");
+		assertThat(statusOfLogin(email, PASSWORD)).isEqualTo(200);
+		assertThat(new JdbcTemplate(dataSource).queryForObject("select count(*) from member where id = ?", Integer.class,
+				UUID.fromString("11111111-1111-4111-8111-111111111111"))).isZero();
 	}
 
 }

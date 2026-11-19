@@ -25,4 +25,10 @@ class PasswordHashTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> new PasswordHash(value));
 	}
 
+	/** 해시가 로그와 단언의 글에 남지 않게 한다. */
+	@Test
+	void r5_password_hash_does_not_show_its_value_as_text() {
+		assertThat(new PasswordHash("$2a$10$abcdefghijklmnopqrstuv").toString()).doesNotContain("abcdefghijklmnopqrstuv");
+	}
+
 }

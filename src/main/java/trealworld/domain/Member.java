@@ -23,6 +23,12 @@ import lombok.NoArgsConstructor;
 public class Member {
 
 	/**
+	 * R2와 R3의 한 자는 코드 포인트 하나다. DB의 열은 UTF-16의 char로 길이를 센다 (H2).
+	 * 한 자는 char로 최대 2개다 (예: 😀). 열의 길이는 그만큼 잡는다. 글자의 수는 값 객체가 지킨다.
+	 */
+	private static final int CHARS_PER_CHARACTER = 2;
+
+	/**
 	 * 회원의 식별자. 저장할 때 생긴다.
 	 * 임의의 값이다. DB를 비우고 다시 채워도 앞의 회원의 식별자가 다시 쓰이지 않는다. (ADR-0003, AC-3.4)
 	 */
@@ -31,11 +37,11 @@ public class Member {
 	private UUID id;
 
 	@Embedded
-	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true, length = Username.MAX_CHARACTERS))
+	@AttributeOverride(name = "value", column = @Column(name = "username", nullable = false, unique = true, length = Username.MAX_CHARACTERS * CHARS_PER_CHARACTER))
 	private Username username;
 
 	@Embedded
-	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true, length = Email.MAX_CHARACTERS))
+	@AttributeOverride(name = "value", column = @Column(name = "email", nullable = false, unique = true, length = Email.MAX_CHARACTERS * CHARS_PER_CHARACTER))
 	private Email email;
 
 	@Embedded

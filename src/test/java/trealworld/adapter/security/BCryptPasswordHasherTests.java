@@ -62,4 +62,22 @@ class BCryptPasswordHasherTests {
 		assertThat(hasher.matches(new Password("가".repeat(23) + "나"), hasher.hash(longest))).isFalse();
 	}
 
+	/**
+	 * ADR-0003: 해시는 BCrypt다. 이 해시는 이 코드가 만든 것이 아니다 (htpasswd -B).
+	 * hash와 matches를 함께 다른 알고리즘으로 바꾸면 위의 테스트는 통과한다. 이 테스트는 실패한다.
+	 */
+	@Test
+	void adr0003_a_bcrypt_hash_made_elsewhere_matches_its_password() {
+		PasswordHash made = new PasswordHash("$2y$10$Btol44o4ekuxx8quWqb/2.EcfFZDtCXIC2w2Org9lUs9q0AHgsxha");
+
+		assertThat(hasher.matches(new Password("correct-horse-battery"), made)).isTrue();
+		assertThat(hasher.matches(new Password("wrong-horse-battery"), made)).isFalse();
+	}
+
+	@Test
+	void adr0003_the_hash_has_the_format_of_bcrypt() {
+		assertThat(hasher.hash(new Password("correct-horse-battery")).value())
+				.matches("\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}");
+	}
+
 }

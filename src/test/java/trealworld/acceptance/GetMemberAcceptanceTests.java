@@ -121,10 +121,11 @@ class GetMemberAcceptanceTests {
 	/** 본문만 바꾸고 서명은 그대로 둔다. 다른 회원인 척한다. */
 	@Test
 	void ac3_3_a_token_with_a_changed_payload_is_rejected() {
+		// 바꾼 값은 실제로 있는 다른 회원의 식별자다. 만료 시각은 그대로다. 틀린 것은 서명뿐이다.
+		String finnId = subjectOf(registerAndLogin("finn-" + id, "finn-" + id + "@example.com"));
 		String[] parts = token.split("\\.");
 		String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-		String changed = payload.replace("\"sub\":\"" + subjectOf(token) + "\"", "\"sub\":\"1\"")
-				.replace("\"exp\":", "\"exp\":1");
+		String changed = payload.replace("\"sub\":\"" + subjectOf(token) + "\"", "\"sub\":\"" + finnId + "\"");
 		assertThat(changed).isNotEqualTo(payload);
 		String tampered = parts[0] + "." + Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(changed.getBytes(StandardCharsets.UTF_8)) + "." + parts[2];
@@ -184,9 +185,27 @@ class GetMemberAcceptanceTests {
 
 		get("/api/members/me?id=" + finnId + "&username=finn-" + id + "&email=finn-" + id + "@example.com", token)
 				.expectStatus().isOk().expectBody().jsonPath("$.username").isEqualTo(username);
-		assertThat(statusOf(get("/api/members/" + finnId, token))).isNotEqualTo(200);
-		assertThat(statusOf(get("/api/members/finn-" + id, token))).isNotEqualTo(200);
-		assertThat(statusOf(get("/api/members", token))).isNotEqualTo(200);
+		// ADR-0005: 없는 경로는 404다. 그 경로가 허용하지 않는 메서드는 405다. 본문에 다른 회원의 값이 없다.
+		for (String path : new String[] { "/api/members/" + finnId, "/api/members/finn-" + id }) {
+			assertThat(bodyOf(get(path, token).expectStatus().isNotFound())).as(path)
+					.doesNotContain("finn-" + id + "@example.com").contains("\"instance\":\"" + path + "\"");
+		}
+		assertThat(bodyOf(get("/api/members", token).expectStatus().isEqualTo(405)))
+				.doesNotContain("finn-" + id + "@example.com").doesNotContain(username);
+	}
+
+	/** ADR-0005: 조회는 본문에서 대상을 읽지 않는다. ADR-0003: 본문의 토큰은 받지 않는다. */
+	@Test
+	void ac3_4_adr0003_the_body_of_the_request_names_neither_the_member_nor_the_token() {
+		registerAndLogin("finn-" + id, "finn-" + id + "@example.com");
+		String finn = "{\"username\": \"finn-" + id + "\", \"email\": \"finn-" + id + "@example.com\"}";
+
+		client.method(org.springframework.http.HttpMethod.GET).uri("/api/members/me")
+				.header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).body(finn).exchange()
+				.expectStatus().isOk().expectBody().jsonPath("$.username").isEqualTo(username);
+		client.method(org.springframework.http.HttpMethod.GET).uri("/api/members/me")
+				.contentType(MediaType.APPLICATION_JSON).body("{\"access_token\": \"" + token + "\"}").exchange()
+				.expectStatus().isUnauthorized();
 	}
 
 	/** 토큰이 유효해도 그 주인인 회원이 없으면 거부한다. */
@@ -213,9 +232,9 @@ class GetMemberAcceptanceTests {
 		}
 	}
 
-	/** 거부의 이유(없다, 위조, 만료, 회원이 없다)를 본문으로 구분하지 못한다. */
+	/** ADR-0003: 거부의 이유(없다, 위조, 만료, 회원이 없다)를 본문으로 구분하지 못한다. */
 	@Test
-	void adr0005_every_rejection_has_the_same_body() {
+	void adr0003_every_rejection_has_the_same_body() {
 		String noToken = bodyOf(client.get().uri("/api/members/me").exchange().expectStatus().isUnauthorized());
 		String forged = bodyOf(me(signed("another-secret-another-secret-0123456789", subjectOf(token),
 				clock.instant().plus(Duration.ofHours(1)))).expectStatus().isUnauthorized());
@@ -238,6 +257,9 @@ class GetMemberAcceptanceTests {
 		assertThat(statusOf(client.get().uri("/api/members").exchange())).isEqualTo(401);
 		assertThat(statusOf(client.get().uri("/api/auth/login").exchange())).isEqualTo(401);
 		assertThat(statusOf(client.delete().uri("/api/members/me").exchange())).isEqualTo(401);
+		// Spring Security의 기본 로그아웃 필터가 인증의 검사보다 먼저 답하면 안 된다.
+		assertThat(statusOf(client.post().uri("/logout").exchange())).isEqualTo(401);
+		assertThat(statusOf(client.get().uri("/logout").exchange())).isEqualTo(401);
 	}
 
 	/** ADR-0003: 토큰은 Authorization 헤더로만 받는다. */

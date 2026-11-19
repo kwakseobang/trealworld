@@ -20,10 +20,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Plan 01의 작업 7. Spec 01의 목표 1, 2, 3이 이어진다: 가입 → 로그인 → 내 정보 조회.
  * 서버 전체를 띄우고 HTTP로 확인한다. (ADR-0004)
- * 서명 키(trealworld.jwt.secret)를 정하지 않는다. 기본 설정의 서버와 같다.
+ * 서명 키(trealworld.jwt.secret)를 빈 값으로 정한다. 기본 설정의 서버와 같다. 밖의 환경이 키를 주어도 이 테스트는 임의의 키로 돈다.
  * 서버가 만든 임의의 키로 발급한 토큰을 같은 서버가 받아들이는지 본다. (ADR-0003)
  */
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "trealworld.jwt.secret=")
 @AutoConfigureRestTestClient
 class MemberFlowAcceptanceTests {
 

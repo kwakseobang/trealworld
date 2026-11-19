@@ -111,7 +111,7 @@ class RegisterMemberServiceTests {
 
 	/** 값의 오류가 먼저다. 값이 틀리면 저장소에 묻지 않는다. */
 	@Test
-	void ac1_2_invalid_values_are_reported_before_duplicates() {
+	void ac1_4_invalid_values_are_reported_before_duplicates() {
 		service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));
 
 		assertThatExceptionOfType(InvalidValuesException.class)

@@ -28,9 +28,25 @@ class JwtSigningKeyTests {
 	@Test
 	void adr0003_without_a_secret_a_random_key_of_32_bytes_is_used() {
 		JwtSigningKey first = new JwtSigningKey("");
-		JwtSigningKey second = new JwtSigningKey(null);
+		JwtSigningKey second = new JwtSigningKey("");
+		JwtSigningKey third = new JwtSigningKey(null);
 
 		assertThat(first.secretKey().getEncoded()).hasSize(32).isNotEqualTo(second.secretKey().getEncoded());
+		assertThat(third.secretKey().getEncoded()).hasSize(32).isNotEqualTo(first.secretKey().getEncoded());
+	}
+
+	/** 공백만 있는 값은 "없다"가 아니다. 잘못 설정한 키다. 임의의 키로 바꾸지 않는다. */
+	@Test
+	void adr0003_a_secret_of_only_whitespace_is_rejected() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new JwtSigningKey(" "));
+		assertThatIllegalArgumentException().isThrownBy(() -> new JwtSigningKey(" ".repeat(40)));
+	}
+
+	/** 길이는 UTF-8의 바이트로 센다. "가"는 3바이트다. */
+	@Test
+	void adr0003_the_length_of_the_secret_is_counted_in_utf8_bytes() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new JwtSigningKey("가".repeat(10) + "a"));
+		assertThat(new JwtSigningKey("가".repeat(10) + "ab").secretKey().getEncoded()).hasSize(32);
 	}
 
 }

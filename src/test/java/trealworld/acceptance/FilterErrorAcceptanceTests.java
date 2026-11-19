@@ -3,6 +3,7 @@ package trealworld.acceptance;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import java.time.Instant;
 
@@ -26,6 +27,12 @@ import trealworld.application.port.in.GetMemberUseCase;
 @AutoConfigureRestTestClient
 class FilterErrorAcceptanceTests {
 
+	/**
+	 * 이 경로에는 컨트롤러가 없다. 조회(/api/members/me)로 요청하면 컨트롤러도 같은 유스케이스를 부른다.
+	 * 그러면 필터의 확인이 사라져도 컨트롤러의 500으로 테스트가 통과한다.
+	 */
+	private static final String PATH = "/api/a-path-without-a-controller";
+
 	@Autowired
 	private RestTestClient client;
 
@@ -44,7 +51,8 @@ class FilterErrorAcceptanceTests {
 				.jsonPath("$.status").isEqualTo(500)
 				.jsonPath("$.title").isEqualTo("Internal Server Error")
 				.jsonPath("$.detail").isNotEmpty()
-				.jsonPath("$.instance").isEqualTo("/api/members/me");
+				.jsonPath("$.instance").isEqualTo(PATH);
+		then(getMember).should().getMember(any());
 	}
 
 	/** 원인의 글에는 저장된 값이 들어 있는 경우가 있다. 본문에 넣지 않는다. (AC-1.7) */
@@ -59,9 +67,10 @@ class FilterErrorAcceptanceTests {
 				.doesNotContain("trace").doesNotContain("timestamp");
 	}
 
+	/** 컨트롤러가 없는 경로로 요청한다. 500은 필터에서만 나올 수 있다. */
 	private RestTestClient.ResponseSpec me() {
 		String token = TestTokens.signed(TestTokens.SECRET, "11111111-1111-4111-8111-111111111111", Instant.now().plusSeconds(600));
-		return client.get().uri("/api/members/me").header("Authorization", "Bearer " + token).exchange();
+		return client.get().uri(PATH).header("Authorization", "Bearer " + token).exchange();
 	}
 
 }

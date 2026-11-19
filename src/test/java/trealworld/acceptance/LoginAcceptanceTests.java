@@ -209,4 +209,14 @@ class LoginAcceptanceTests {
 				.jsonPath("$.errors.email").exists();
 	}
 
+	/** ADR-0005: 요청의 값은 JSON의 문자열이다. 숫자인 비밀번호는 읽지 못하는 본문이다 (400). 로그인 실패(401)가 아니다. */
+	@Test
+	void adr0005_a_value_that_is_not_a_json_string_is_rejected() {
+		client.post().uri("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+				.body("{\"email\": \"jake@example.com\", \"password\": 12345678}").exchange()
+				.expectStatus().isBadRequest()
+				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+				.expectBody().jsonPath("$.errors").doesNotExist();
+	}
+
 }

@@ -25,18 +25,19 @@ class JwtSigningKey {
 	private final SecretKey secretKey;
 
 	/**
-	 * @param secret 설정 trealworld.jwt.secret의 값. 비어 있으면 임의의 키를 만든다
+	 * @param secret 설정 trealworld.jwt.secret의 값. 없거나 빈 글자("")이면 임의의 키를 만든다
 	 */
 	JwtSigningKey(@Value("${trealworld.jwt.secret:}") String secret) {
 		byte[] bytes;
-		if (secret == null || secret.isBlank()) {
+		if (secret == null || secret.isEmpty()) {
 			logger.warn("trealworld.jwt.secret이 없다. 임의의 서명 키를 만든다. 서버를 다시 시작하면 발급한 토큰은 모두 무효가 된다.");
 			bytes = new byte[MIN_SECRET_BYTES];
 			new SecureRandom().nextBytes(bytes);
 		}
 		else {
 			bytes = secret.getBytes(StandardCharsets.UTF_8);
-			if (bytes.length < MIN_SECRET_BYTES) {
+			// 공백만 있는 값은 "없다"가 아니다. 잘못 설정한 키다.
+			if (bytes.length < MIN_SECRET_BYTES || secret.isBlank()) {
 				throw new IllegalArgumentException("trealworld.jwt.secret은 UTF-8로 32바이트 이상이어야 한다");
 			}
 		}

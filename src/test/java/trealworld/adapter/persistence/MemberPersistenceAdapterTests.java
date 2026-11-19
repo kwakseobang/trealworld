@@ -111,4 +111,19 @@ class MemberPersistenceAdapterTests {
 				found -> assertThat(found.getUsername()).isEqualTo(saved.getUsername()));
 	}
 
+	/** 한 자는 코드 포인트 하나다. 😀는 한 자이고 UTF-16으로는 char 2개다. DB의 열은 char로 센다. */
+	@Test
+	void r2_r3_the_longest_username_and_email_of_emoji_are_saved() {
+		String username = "😀".repeat(50 - id.length()) + id;
+		String tail = "-" + id + "@example.com";
+		String email = "😀".repeat(254 - tail.length()) + tail;
+
+		members.save(member(username, email));
+
+		assertThat(members.findByEmail(new Email(email))).hasValueSatisfying(found -> {
+			assertThat(found.getUsername()).isEqualTo(new Username(username));
+			assertThat(found.getEmail().value()).isEqualTo(email);
+		});
+	}
+
 }
