@@ -64,7 +64,7 @@ class PasswordTests {
 
 	@Test
 	void r5_password_does_not_show_its_value_as_text() {
-		assertThat(new Password("correct-horse-battery").toString()).doesNotContain("correct-horse-battery");
+		assertThat(new Password("correct-horse-battery").toString()).isEqualTo("Password[****]");
 	}
 
 	/** 짝이 없는 서로게이트는 UTF-8로 바꿀 수 없다. 받으면 서로 다른 비밀번호가 같은 바이트가 된다. */

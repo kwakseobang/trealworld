@@ -217,4 +217,17 @@ class RegisterMemberServiceTests {
 
 	}
 
+	/** 중복은 해시를 만들기 전에 거부한다. 해시(BCrypt)는 비싸다. 저장도 시도하지 않는다. */
+	@Test
+	void r6_r7_a_duplicate_is_rejected_before_the_password_is_hashed() {
+		service.register(new RegisterMemberCommand("jake", "jake@example.com", PASSWORD));
+
+		assertThatExceptionOfType(DuplicateMemberException.class).isThrownBy(
+				() -> service.register(new RegisterMemberCommand("finn", "jake@example.com", "another-horse-battery")));
+		assertThatExceptionOfType(DuplicateMemberException.class).isThrownBy(
+				() -> service.register(new RegisterMemberCommand("jake", "finn@example.com", "another-horse-battery")));
+
+		assertThat(passwordHasher.hashed).containsExactly(PASSWORD);
+	}
+
 }
